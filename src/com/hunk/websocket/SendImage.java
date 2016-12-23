@@ -22,7 +22,7 @@ public class SendImage {
 	@OnMessage
 	public void getMessage(Session session ,String message){
 		try {
-			FileInputStream fs = new FileInputStream("E:\\PM\\DSC_0763.JPG");
+			FileInputStream fs = new FileInputStream("E:\\PM\\asd.jpg");
 			byte[] content = new byte[fs.available()];
 			fs.read(content);
 			ByteBuffer byteBuffer = ByteBuffer.wrap(content);

@@ -28,23 +28,21 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 			ws.onopen=function(event){
 				console.log("open...");
 			};
-			 ws.onmessage = function(event){
+			ws.onmessage = function(event){
 			
-					 var reader = new FileReader();
+				var reader = new FileReader();
 					
 					
-					 reader.onload=function(eve){
-						 if(eve.target.readyState==FileReader.DONE)
-						 {
-							 
-							var img = document.createElement("img");
-							img.src=this.result;
-							document.getElementById("show").appendChild(img);
-						 }
-					 };
-					 reader.readAsDataURL(event.data);
-					
-			 };
+				reader.onload=function(eve){
+					if(eve.target.readyState==FileReader.DONE)
+					{
+						var img = document.createElement("img");
+						img.src=this.result;
+						document.getElementById("show").appendChild(img);
+					}
+				};
+				reader.readAsDataURL(event.data);
+			};
 		}
 		
 		function sendMsg()
