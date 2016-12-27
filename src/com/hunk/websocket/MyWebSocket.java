@@ -1,6 +1,7 @@
 package com.hunk.websocket;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -86,6 +87,41 @@ public class MyWebSocket {
             }
         }
     }
+    
+    /**  
+     * 接收信息时执行  
+     * @param session  
+     * @param bb 二进制数组  
+     * @param last  
+     */  
+    @OnMessage  
+    public void echoBinaryMessage(Session session, ByteBuffer bb, boolean last) {
+    	System.out.println("来自客户端的图片！！！"+last+"bb:"+bb.limit());
+        try {  
+            if (session.isOpen()) {
+            	for(MyWebSocket item: webSocketSet){
+            		//item.session.getBasicRemote().sendBinary(bb, last);
+            		item.session.getBasicRemote().sendBinary(bb, false);
+            		if(last){
+            			String uid = "1482740134752860";
+            			byte[] uidb = uid.getBytes("UTF8");
+            			ByteBuffer uidbf = ByteBuffer.wrap(uidb);
+            			System.out.println(uidbf.capacity()+"hgfhgf"+uidbf.remaining());
+            			System.out.println(new String(uidbf.array(),"UTF-8"));
+            			item.session.getBasicRemote().sendBinary(uidbf, last);
+            		}
+            	}
+                //session.getBasicRemote().sendBinary(bb, last);  
+            }  
+        } catch (IOException e) {  
+            try {  
+            	System.out.println("发送错误！！！");
+                session.close();  
+            } catch (IOException e1) {  
+                // Ignore  
+            }  
+        }  
+    }  
      
     /**
      * 发生错误时调用

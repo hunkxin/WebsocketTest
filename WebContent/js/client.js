@@ -17,6 +17,9 @@
 		screenheight:w.innerHeight ? w.innerHeight : dx.clientHeight,
 		username:null,
 		userid:null,
+		imgusername:null,
+		imguserid:null,
+		isimg:false,
 		socket:null,
 		//让浏览器滚动条保持在最低部
 		scrollToBottom:function(){
@@ -91,6 +94,7 @@
 				d.getElementById("loginbox").style.display = 'none';
 				d.getElementById("chatbox").style.display = 'block';
 				this.init(username);
+				initdrop();
 			}
 			return false;
 		},
@@ -129,23 +133,68 @@
 	
 	//监听消息发送
 	function setMessageInnerHTML(obj){
-		var msg = JSON.parse(obj);
-		if(msg.action!=null&&(msg.action=="login"||msg.action=="logout")){
-			CHAT.updateSysMsg(msg, msg.action);
-		}else{
-			var isme = (msg.userid == CHAT.userid) ? true : false;
-			var contentDiv = '<div>'+msg.content+'</div>';
-			var usernameDiv = '<span>'+msg.username+'</span>';
-			
+		if(obj instanceof Blob){
+			var blobid = obj.slice(-16);
+			var idreader = new FileReader();
+			idreader.onload = function(e) {
+				  var bid = e.target.result;
+				  alert(bid.toString());
+		    	};
+		    //idreader.readAsArrayBuffer(blobid);
+		    idreader.readAsBinaryString(blobid);
+			var blobct = obj.slice(0,obj.size-16);
+			//alert(blobid.toString());
+			var contentDiv = document.createElement("img");
+			//var contentDiv = document.createElement("video");
+			contentDiv.height=100;
+			var reader = new FileReader();
+		    reader.onload = function(e) {
+				  //alert(e.target.result);
+				  //aVdo.play();
+				  //window.URL.revokeObjectURL(obj_url);
+				  contentDiv.src = e.target.result;
+				  //contentDiv.play();
+		    	};
+		    reader.readAsDataURL(blobct);
+		    //reader.readAsBinaryString(obj);
+		    var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
+		    var usernameDiv = document.createElement("span");
+		    usernameDiv.innerHTML = CHAT.username;
+			//var usernameDiv = '<span>'+msg.username+'</span>';
 			var section = d.createElement('section');
 			if(isme){
 				section.className = 'user';
-				section.innerHTML = contentDiv + usernameDiv;
+				section.appendChild(contentDiv);
+				section.appendChild(usernameDiv);
 			} else {
 				section.className = 'service';
-				section.innerHTML = usernameDiv + contentDiv;
+				section.appendChild(usernameDiv);
+				section.appendChild(contentDiv);
 			}
 			CHAT.msgObj.appendChild(section);
+		}else{
+			var msg = JSON.parse(obj);
+			if(msg.action!=null&&(msg.action=="login"||msg.action=="logout")){
+				CHAT.updateSysMsg(msg, msg.action);
+			}else if(msg.action!=null&&msg.action=="message"){
+				var isme = (msg.userid == CHAT.userid) ? true : false;
+				var contentDiv = '<div>'+msg.content+'</div>';
+				var usernameDiv = '<span>'+msg.username+'</span>';
+				
+				var section = d.createElement('section');
+				if(isme){
+					section.className = 'user';
+					section.innerHTML = contentDiv + usernameDiv;
+				} else {
+					section.className = 'service';
+					section.innerHTML = usernameDiv + contentDiv;
+				}
+			}else if(msg.action!=null&&msg.action=="img"){
+				CHAT.isimg=true;
+				CHAT.imgusername=msg.username;
+				CHAT.imguserid=msg.userid;
+			}
+				CHAT.msgObj.appendChild(section);
 		}
 		CHAT.scrollToBottom();	
 	};
@@ -155,6 +204,7 @@
             websocket.onerror = function(){
             	//var logoutmsg = {action:"logout",userid:CHAT.userid, username:CHAT.username,time:stdTime()};
             	//websocket.send(JSON.stringify(logoutmsg));
+            	alert("wrong!!!");
             };
              
             //连接成功建立的回调方法
@@ -171,7 +221,7 @@
              
             //连接关闭的回调方法
             websocket.onclose = function(){
-            	
+            	alert("close!!!");
             }
              
             //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
@@ -193,7 +243,7 @@
 					  "/"+now.getDate()+
 					  "/"+week[now.getDay()]+
 					  "/"+now.getHours()+
-					  ":"+now.getMinutes()+
+					  ":"+(now.getMinutes()<10?"0":"")+now.getMinutes()+
 					  ":"+(now.getSeconds()<10?"0":"")+now.getSeconds();
 		return stdtime;
 	}
@@ -211,4 +261,114 @@
 			CHAT.submit();
 		}
 	};
+	
+	function initdrop(){
+		var dropbox;
+
+		dropbox = document.getElementById("inputdiv");
+		dropbox.addEventListener("dragenter", dragenter, false);
+		dropbox.addEventListener("dragover", dragover, false);
+		dropbox.addEventListener("drop", drop, false);
+	}
+
+	function dragenter(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	function dragover(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+		
+	function drop(e) {
+		e.stopPropagation();
+		e.preventDefault();
+
+		var dt = e.dataTransfer;
+		var files = dt.files;
+
+		handleFiles(files);
+	}
+
+	function handleFiles(files) {
+		  for (var i = 0; i < files.length; i++) {
+		    var file = files[i];
+		    var videoType = /^image\//;
+		    //var videoType = /^video\//;
+		    
+		    if ( !videoType.test(file.type) ) {
+		      	continue;
+		    }
+		    
+		   if(file.size>(1024*1024*10)){
+			   for(var tmp in files){
+				   tmp.close();
+			   }
+			   alert("图片大小超过10M！");
+		   }else{
+			   var obj = {
+						action:"img",
+						userid: CHAT.userid,
+						username: CHAT.username,
+						time:stdTime(),
+						content: ""
+					};
+			   CHAT.socket.send(JSON.stringify(obj));
+			   //var filecontent = file.slice();
+			   //alert(file.type);
+			   CHAT.socket.send(file);
+			   //CHAT.socket.send(filecontent);
+		   }
+			
+			//this.socket.emit('message', obj);
+			
+		    //var video = document.createElement("video");
+		    //var video = document.getElementById("video");
+		    //video.classList.add("obj");
+		    //ideo.id="video";
+		    //video.file=file;
+		    
+		    //video.height=100;
+		    //var sc = document.createElement("source");
+		    //var obj_url = window.URL.createObjectURL(file);
+		    //sc.src = obj_url;
+		    //sc.type="video/mp4";
+		    //video.appendChild(sc);
+		    
+		    /*video.onload = function(e) {
+		        window.URL.revokeObjectURL(obj_url);
+		      }*/
+		    
+		    // 假设 "preview" 是将要展示图片的 div
+		    //preview = document.getElementById("preview");
+		    //preview.appendChild(video);
+		    //video.src = obj_url;
+		    //video.play();
+		    //window.URL.revokeObjectURL(obj_url);
+		    
+		    /*var reader = new FileReader();
+		    //alert(file.size);
+		    reader.onload = function(e) {
+				  var content = e.target.result; 
+				  alert(content);
+				  //aVdo.play();
+				  //window.URL.revokeObjectURL(obj_url);
+				  var obj = {
+							action:"message",
+							userid: this.userid,
+							username: this.username,
+							time:stdTime(),
+							content: content
+						};
+				  
+				  //this.socket.emit('message', obj);
+				  //CHAT.socket.send(JSON.stringify(obj));
+				  CHAT.socket.send(content);
+				  d.getElementById("content").value = '';
+		    	};
+		    //reader.readAsDataURL(file);
+		    reader.readAsBinaryString(file);*/
+		  }
+	}
 })();
