@@ -20,6 +20,7 @@
 		imgusername:null,
 		imguserid:null,
 		isimg:false,
+		lasttime:0,
 		socket:null,
 		//让浏览器滚动条保持在最低部
 		scrollToBottom:function(){
@@ -62,28 +63,30 @@
 			var onlineCount = o.onlineCount;
 			//新加入用户的信息
 			var user = o.username;
+			var time = o.time;
 				
 			//更新在线人数
 			var userhtml = '';
-			var separator = '';
-			for(key in onlineUsers) {
-		        if(onlineUsers.hasOwnProperty(key)){
-					userhtml += separator+onlineUsers[key];
-					separator = '、';
-				}
+			var separator = '、';
+			for(var i=0;i<onlineUsers.length;i++) {
+				userhtml += onlineUsers[i].username;
+				if(i==onlineUsers.length-1)
+					separator = '';
+				userhtml += separator;
 		    }
 			d.getElementById("onlinecount").innerHTML = '当前共有 '+onlineCount+' 人在线，在线列表：'+userhtml;
 			
 			//添加系统消息
 			var html = '';
 			html += '<div class="msg-system">';
+			html += time+"&nbsp;&nbsp";
 			html += user;
 			html += (action == 'login') ? ' 加入了聊天室' : ' 退出了聊天室';
 			html += '</div>';
 			var section = d.createElement('section');
 			section.className = 'system J-mjrlinkWrap J-cutMsg';
 			section.innerHTML = html;
-			this.msgObj.appendChild(section);	
+			this.msgObj.appendChild(section);
 			this.scrollToBottom();
 		},
 		//第一个界面用户提交用户名
@@ -134,14 +137,10 @@
 	//监听消息发送
 	function setMessageInnerHTML(obj){
 		if(obj instanceof Blob){
+			showtime();
+			var bid = "";
 			var blobid = obj.slice(-16);
-			var idreader = new FileReader();
-			idreader.onload = function(e) {
-				  var bid = e.target.result;
-				  alert(bid.toString());
-		    	};
-		    //idreader.readAsArrayBuffer(blobid);
-		    idreader.readAsBinaryString(blobid);
+			
 			var blobct = obj.slice(0,obj.size-16);
 			//alert(blobid.toString());
 			var contentDiv = document.createElement("img");
@@ -157,26 +156,36 @@
 		    	};
 		    reader.readAsDataURL(blobct);
 		    //reader.readAsBinaryString(obj);
-		    var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
-		    var usernameDiv = document.createElement("span");
-		    usernameDiv.innerHTML = CHAT.username;
-			//var usernameDiv = '<span>'+msg.username+'</span>';
-			var section = d.createElement('section');
-			if(isme){
-				section.className = 'user';
-				section.appendChild(contentDiv);
-				section.appendChild(usernameDiv);
-			} else {
-				section.className = 'service';
-				section.appendChild(usernameDiv);
-				section.appendChild(contentDiv);
-			}
-			CHAT.msgObj.appendChild(section);
+		    //var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
+		    var idreader = new FileReader();
+			idreader.onload = function(e) {
+				  bid = e.target.result;
+				  var isme = (bid == CHAT.userid) ? true : false;
+				  
+				  var usernameDiv = document.createElement("span");
+				  usernameDiv.innerHTML = isme?CHAT.username:CHAT.imgusername;
+				  //var usernameDiv = '<span>'+msg.username+'</span>';
+				  var section = d.createElement('section');
+				  if(isme){
+					  section.className = 'user';
+					  section.appendChild(contentDiv);
+					  section.appendChild(usernameDiv);
+				  } else {
+					  section.className = 'service';
+					  section.appendChild(usernameDiv);
+					  section.appendChild(contentDiv);
+				  }
+				  CHAT.msgObj.appendChild(section);
+		    	};
+		    //idreader.readAsArrayBuffer(blobid);
+		    //如果Blob中包含字符串，则需要readAsBinaryString()方法解析
+		    idreader.readAsBinaryString(blobid);
 		}else{
 			var msg = JSON.parse(obj);
 			if(msg.action!=null&&(msg.action=="login"||msg.action=="logout")){
 				CHAT.updateSysMsg(msg, msg.action);
 			}else if(msg.action!=null&&msg.action=="message"){
+				showtime();
 				var isme = (msg.userid == CHAT.userid) ? true : false;
 				var contentDiv = '<div>'+msg.content+'</div>';
 				var usernameDiv = '<span>'+msg.username+'</span>';
@@ -189,13 +198,15 @@
 					section.className = 'service';
 					section.innerHTML = usernameDiv + contentDiv;
 				}
+				CHAT.msgObj.appendChild(section);
 			}else if(msg.action!=null&&msg.action=="img"){
 				CHAT.isimg=true;
 				CHAT.imgusername=msg.username;
 				CHAT.imguserid=msg.userid;
 			}
-				CHAT.msgObj.appendChild(section);
 		}
+		
+		//alert(CHAT.lasttime);
 		CHAT.scrollToBottom();	
 	};
 	
@@ -209,7 +220,7 @@
              
             //连接成功建立的回调方法
             websocket.onopen = function(event){
-            	var loginmsg = {action:"login",userid:CHAT.userid, username:CHAT.username,time:stdTime()};
+            	var loginmsg = {action:"login",userid:CHAT.userid, username:CHAT.username,time:stdTime(),onlineCount:"",onlineUsers:[{"username":""}]};
             	//alert(JSON.stringify(loginmsg));
             	websocket.send(JSON.stringify(loginmsg));
             }
@@ -221,13 +232,13 @@
              
             //连接关闭的回调方法
             websocket.onclose = function(){
-            	alert("close!!!");
+            	//alert("close!!!");
             }
              
             //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
             window.onbeforeunload = function(){
             	if(websocket!=null){
-            		var logoutmsg = {action:"logout",userid:CHAT.userid, username:CHAT.username,time:stdTime()};
+            		var logoutmsg = {action:"logout",userid:CHAT.userid, username:CHAT.username,time:stdTime(),onlineCount:"",onlineUsers:[{"username":""}]};
             		websocket.send(JSON.stringify(logoutmsg));
             		websocket.close();
             		websocket=null;
@@ -246,6 +257,23 @@
 					  ":"+(now.getMinutes()<10?"0":"")+now.getMinutes()+
 					  ":"+(now.getSeconds()<10?"0":"")+now.getSeconds();
 		return stdtime;
+	}
+	
+	function showtime(){
+		var nowtime = (new Date()).getTime();
+		if(Math.abs(nowtime-CHAT.lasttime)>10000){
+			var time = stdTime();
+			var html = '';
+			html += '<div class="msg-system">';
+			html += time;
+			html += '</div>';
+			var section = d.createElement('section');
+			section.className = 'system J-mjrlinkWrap J-cutMsg';
+			section.innerHTML = html;
+			CHAT.msgObj.appendChild(section);
+			CHAT.scrollToBottom();
+		}
+		CHAT.lasttime = nowtime;
 	}
 	//通过“回车”提交用户名
 	d.getElementById("username").onkeydown = function(e) {
@@ -312,7 +340,8 @@
 						userid: CHAT.userid,
 						username: CHAT.username,
 						time:stdTime(),
-						content: ""
+						onlineCount: "",
+						onlineUsers:null
 					};
 			   CHAT.socket.send(JSON.stringify(obj));
 			   //var filecontent = file.slice();

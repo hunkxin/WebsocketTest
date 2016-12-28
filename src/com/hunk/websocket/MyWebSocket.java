@@ -12,6 +12,13 @@ import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hunk.bean.UserInfo;
+import com.hunk.bean.Username;
  
 //该注解用来指定一个URI，客户端可以通过这个URI来连接到WebSocket。类似Servlet的注解mapping。无需在web.xml中配置。
 @ServerEndpoint("/websocket")
@@ -26,8 +33,7 @@ public class MyWebSocket {
     private Session session;
     
     //客户信息
-    private String userid;
-    private String username;
+    private UserInfo user;
 
     /**
      * 连接建立成功调用的方法
@@ -38,15 +44,23 @@ public class MyWebSocket {
         this.session = session;
         webSocketSet.add(this);     //加入set中
         addOnlineCount();           //在线数加1
-        for(MyWebSocket item: webSocketSet){
-        	try {
-        		item.sendMessage("login:"+String.valueOf(getOnlineCount()));
-        		System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
-    		} catch (IOException e) {
-    			// TODO Auto-generated catch block
-    			e.printStackTrace();
-    		}
-        }
+//        this.user = new UserInfo();
+//        this.user.setAction("login");
+//        this.user.setOnlineCount(String.valueOf(onlineCount));
+//        List<Username> usernames = new ArrayList<Username>();
+//        for(MyWebSocket item: webSocketSet){
+//        	usernames.add(new Username(item.user.getUsername()));
+//        }
+//        this.user.setOnlineUsers(usernames);
+//        for(MyWebSocket item: webSocketSet){
+//        	try {
+//        		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
+//        		System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
+//    		} catch (IOException e) {
+//    			// TODO Auto-generated catch block
+//    			e.printStackTrace();
+//    		}
+//        }
         System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
     }
      
@@ -57,9 +71,16 @@ public class MyWebSocket {
     public void onClose(){
         webSocketSet.remove(this);  //从set中删除
         subOnlineCount();           //在线数减1
+        this.user.setAction("logout");
+        this.user.setOnlineCount(String.valueOf(onlineCount));
+        List<Username> usernames = new ArrayList<Username>();
+        for(MyWebSocket item: webSocketSet){
+        	usernames.add(new Username(item.user.getUsername()));
+        }
+        this.user.setOnlineUsers(usernames);
         for(MyWebSocket item: webSocketSet){
         	try {
-        		item.sendMessage("{logout:"+String.valueOf(getOnlineCount()));
+        		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
     		} catch (IOException e) {
     			// TODO Auto-generated catch block
     			e.printStackTrace();
@@ -72,20 +93,46 @@ public class MyWebSocket {
      * 收到客户端消息后调用的方法
      * @param message 客户端发送过来的消息
      * @param session 可选的参数
+     * @throws JsonProcessingException 
      */
     @OnMessage
-    public void onMessage(String message, Session session) {
+    public void onMessage(String message, Session session) throws JsonProcessingException {
         System.out.println("来自客户端的消息:" + message);
-        checkMessage(message);
-        //群发消息
-        for(MyWebSocket item: webSocketSet){             
-            try {
-                item.sendMessage(message);
-            } catch (IOException e) {
-                e.printStackTrace();
-                continue;
+        if(this.user==null){
+        	UserInfo tmp = checkMessage(message);
+        	if(tmp.getAction().equals("login")){
+        		this.user = tmp;
+        	}
+        	this.user.setOnlineCount(String.valueOf(onlineCount));
+            List<Username> usernames = new ArrayList<Username>();
+            for(MyWebSocket item: webSocketSet){
+            	usernames.add(new Username(item.user.getUsername()));
+            }
+            this.user.setOnlineUsers(usernames);
+            for(MyWebSocket item: webSocketSet){             
+                try {
+                	if (session.isOpen()){
+                		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
+                	}
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    continue;
+                }
+            }
+        }else{
+        	//群发消息
+            for(MyWebSocket item: webSocketSet){             
+                try {
+                	if (session.isOpen()){
+                		item.sendMessage(message);
+                	}
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    continue;
+                }
             }
         }
+        System.out.println((new ObjectMapper()).writeValueAsString(this.user));
     }
     
     /**  
@@ -103,7 +150,8 @@ public class MyWebSocket {
             		//item.session.getBasicRemote().sendBinary(bb, last);
             		item.session.getBasicRemote().sendBinary(bb, false);
             		if(last){
-            			String uid = "1482740134752860";
+            			String uid = this.user.getUserid();
+            			//此处需要设置格式为UTF8，否则接收端无法解析
             			byte[] uidb = uid.getBytes("UTF8");
             			ByteBuffer uidbf = ByteBuffer.wrap(uidb);
             			System.out.println(uidbf.capacity()+"hgfhgf"+uidbf.remaining());
@@ -144,40 +192,58 @@ public class MyWebSocket {
         //this.session.getAsyncRemote().sendText(message);
     }
     
-    private void checkMessage(String message){
-    	String[] tmp = message.split("\",\"");
-    	if(tmp!=null){
-    		for(int i=0;i<tmp.length;i++){
-    			String[] set = tmp[i].split("\",\"");
-    			if(set!=null){
-    				String key = "";
-    				String value = "";
-    				if(i==0){
-    					key = set[0].substring(2);
-    				}else
-    					key = set[0].substring(1);
-    				if(key.equals("action")){
-    					value=set[1].substring(0,set[1].length()-2);
-    					if(value.equals("login")||value.equals("logout")){
-    						continue;
-    					}else
-    						break;
-    				}else if(key.equals("userid")){
-    					value=set[1].substring(0,set[1].length()-2);
-    					this.userid=value;
-    				}else if(key.equals("username")){
-    					value=set[1].substring(0,set[1].length()-2);
-    					this.username=value;
-    				}
-    			}
-    		}	
-    	}
+//    private void checkMessage(String message){
+//    	String[] tmp = message.split("\",\"");
+//    	if(tmp!=null){
+//    		for(int i=0;i<tmp.length;i++){
+//    			String[] set = tmp[i].split("\",\"");
+//    			if(set!=null){
+//    				String key = "";
+//    				String value = "";
+//    				if(i==0){
+//    					key = set[0].substring(2);
+//    				}else
+//    					key = set[0].substring(1);
+//    				if(key.equals("action")){
+//    					value=set[1].substring(0,set[1].length()-2);
+//    					if(value.equals("login")||value.equals("logout")){
+//    						continue;
+//    					}else
+//    						break;
+//    				}else if(key.equals("userid")){
+//    					value=set[1].substring(0,set[1].length()-2);
+//    					this.user.setUserid(value);
+//    				}else if(key.equals("username")){
+//    					value=set[1].substring(0,set[1].length()-2);
+//    					this.user.setUsername(value);
+//    				}
+//    			}
+//    		}	
+//    	}
+//    }
+    
+	private UserInfo checkMessage(String message){
+    	UserInfo uinfo  = new UserInfo();
+    	try {
+    		uinfo = (new ObjectMapper()).readValue(message, uinfo.getClass());
+    		//List<Entity> myObjects = mapper.readValue(message, mapper.getTypeFactory().constructCollectionType(List.class, entity.getClass()));
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return uinfo;
     }
     
-    private String[] checkJson(String message){
-    	String[] tmp = message.split("\",\"");
-    	return tmp;
-    }
+//    private String[] checkJson(String message){
+//    	String[] tmp = message.split("\",\"");
+//    	return tmp;
+//    }
  
     public static synchronized int getOnlineCount() {
         return onlineCount;
