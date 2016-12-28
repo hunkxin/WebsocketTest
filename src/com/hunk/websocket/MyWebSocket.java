@@ -44,23 +44,6 @@ public class MyWebSocket {
         this.session = session;
         webSocketSet.add(this);     //加入set中
         addOnlineCount();           //在线数加1
-//        this.user = new UserInfo();
-//        this.user.setAction("login");
-//        this.user.setOnlineCount(String.valueOf(onlineCount));
-//        List<Username> usernames = new ArrayList<Username>();
-//        for(MyWebSocket item: webSocketSet){
-//        	usernames.add(new Username(item.user.getUsername()));
-//        }
-//        this.user.setOnlineUsers(usernames);
-//        for(MyWebSocket item: webSocketSet){
-//        	try {
-//        		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
-//        		System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
-//    		} catch (IOException e) {
-//    			// TODO Auto-generated catch block
-//    			e.printStackTrace();
-//    		}
-//        }
         System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
     }
      
@@ -97,7 +80,7 @@ public class MyWebSocket {
      */
     @OnMessage
     public void onMessage(String message, Session session) throws JsonProcessingException {
-        System.out.println("来自客户端的消息:" + message);
+        //System.out.println("来自客户端的消息:" + message);
         if(this.user==null){
         	UserInfo tmp = checkMessage(message);
         	if(tmp.getAction().equals("login")){
@@ -132,7 +115,7 @@ public class MyWebSocket {
                 }
             }
         }
-        System.out.println((new ObjectMapper()).writeValueAsString(this.user));
+        //System.out.println((new ObjectMapper()).writeValueAsString(this.user));
     }
     
     /**  
@@ -143,7 +126,7 @@ public class MyWebSocket {
      */  
     @OnMessage  
     public void echoBinaryMessage(Session session, ByteBuffer bb, boolean last) {
-    	System.out.println("来自客户端的图片！！！"+last+"bb:"+bb.limit());
+    	//System.out.println("来自客户端的图片！！！"+last+"bb:"+bb.limit());
         try {  
             if (session.isOpen()) {
             	for(MyWebSocket item: webSocketSet){
@@ -157,8 +140,8 @@ public class MyWebSocket {
             			byte[] uidb = uinfos.getBytes("UTF8");
             			ByteBuffer uidbf = ByteBuffer.wrap(uidb);
             			uinfos += setsizetostring(uidbf.remaining());
-            			System.out.println(uidb.length+"uidb"+uidbf.capacity()+"uidbf"+uidbf.remaining());
-            			System.out.println(new String(uidbf.array(),"UTF-8"));
+            			//System.out.println(uidb.length+"uidb"+uidbf.capacity()+"uidbf"+uidbf.remaining());
+            			//System.out.println(new String(uidbf.array(),"UTF-8"));
             			item.session.getBasicRemote().sendBinary(ByteBuffer.wrap(uinfos.getBytes("UTF8")), true);
             		}
             	}

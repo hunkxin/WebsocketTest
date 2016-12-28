@@ -113,20 +113,6 @@
 			//连接websocket后端服务器
 			this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/websocket");
 			
-			//告诉服务器端有用户登录
-			//this.socket.emit('login', {userid:this.userid, username:this.username});
-			
-			
-			//监听新用户登录
-			/*this.socket.on('login', function(o){
-				CHAT.updateSysMsg(o, 'login');	
-			});*/
-			
-			//监听用户退出
-			/*this.socket.on('logout', function(o){
-				CHAT.updateSysMsg(o, 'logout');
-			});*/
-			
 			socketutil(this.socket);
 		}
 	};
@@ -359,10 +345,8 @@
 						onlineCount: "",
 						onlineUsers:null
 					};
-			   //var filecontent = file.slice();
 			   //alert(file.type);
 			   CHAT.socket.send(file);
-			   //CHAT.socket.send(filecontent);
 		   }
 			
 			//this.socket.emit('message', obj);
