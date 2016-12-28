@@ -150,13 +150,16 @@ public class MyWebSocket {
             		//item.session.getBasicRemote().sendBinary(bb, last);
             		item.session.getBasicRemote().sendBinary(bb, false);
             		if(last){
-            			String uid = this.user.getUserid();
+            			UserInfo uinfo = new UserInfo(null, this.user.getUsername(), this.user.getUserid(), null, null, null);
             			//此处需要设置格式为UTF8，否则接收端无法解析
-            			byte[] uidb = uid.getBytes("UTF8");
+            			String uinfos = (new ObjectMapper()).writeValueAsString(uinfo);
+            			
+            			byte[] uidb = uinfos.getBytes("UTF8");
             			ByteBuffer uidbf = ByteBuffer.wrap(uidb);
-            			System.out.println(uidbf.capacity()+"hgfhgf"+uidbf.remaining());
+            			uinfos += setsizetostring(uidbf.remaining());
+            			System.out.println(uidb.length+"uidb"+uidbf.capacity()+"uidbf"+uidbf.remaining());
             			System.out.println(new String(uidbf.array(),"UTF-8"));
-            			item.session.getBasicRemote().sendBinary(uidbf, last);
+            			item.session.getBasicRemote().sendBinary(ByteBuffer.wrap(uinfos.getBytes("UTF8")), true);
             		}
             	}
                 //session.getBasicRemote().sendBinary(bb, last);  
@@ -244,6 +247,18 @@ public class MyWebSocket {
 //    	String[] tmp = message.split("\",\"");
 //    	return tmp;
 //    }
+	
+	private String setsizetostring(int size){
+		String ssize = String.valueOf(size);
+		int a = ssize.length();
+		if(a<=8){
+			for(int i=0;i<8-a;i++){
+				ssize = "0"+ ssize;
+			}
+			return ssize;
+		}
+		return "00000000";
+	}
  
     public static synchronized int getOnlineCount() {
         return onlineCount;

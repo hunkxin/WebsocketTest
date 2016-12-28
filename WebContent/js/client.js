@@ -17,9 +17,6 @@
 		screenheight:w.innerHeight ? w.innerHeight : dx.clientHeight,
 		username:null,
 		userid:null,
-		imgusername:null,
-		imguserid:null,
-		isimg:false,
 		lasttime:0,
 		socket:null,
 		//让浏览器滚动条保持在最低部
@@ -138,48 +135,60 @@
 	function setMessageInnerHTML(obj){
 		if(obj instanceof Blob){
 			showtime();
-			var bid = "";
-			var blobid = obj.slice(-16);
-			
-			var blobct = obj.slice(0,obj.size-16);
-			//alert(blobid.toString());
-			var contentDiv = document.createElement("img");
-			//var contentDiv = document.createElement("video");
-			contentDiv.height=100;
-			var reader = new FileReader();
-		    reader.onload = function(e) {
-				  //alert(e.target.result);
-				  //aVdo.play();
-				  //window.URL.revokeObjectURL(obj_url);
-				  contentDiv.src = e.target.result;
-				  //contentDiv.play();
+			//alert(obj.size);
+			var uinfosize = 0;
+			var blobuinfosize = obj.slice(-8);
+			var sizereader = new FileReader();
+			sizereader.onload = function(evt) {
+					uinfosize = parseInt(evt.target.result);
+					var buinfo = {};
+					var blobuinfo = obj.slice(-uinfosize-8,-8);
+					//alert(blobuinfo.size);
+					
+					var blobct = obj.slice(0,obj.size-uinfosize);
+					var contentDiv = document.createElement("img");
+					//var contentDiv = document.createElement("video");
+					contentDiv.height=100;
+					var reader = new FileReader();
+				    reader.onload = function(e) {
+						  //alert(e.target.result);
+						  //aVdo.play();
+						  //window.URL.revokeObjectURL(obj_url);
+						  contentDiv.src = e.target.result;
+						  //contentDiv.play();
+				    	};
+				    //对于图片或视频流，可以使用readAsBinaryString()方法直接生成DataURL供元素调用
+				    reader.readAsDataURL(blobct);
+				    //reader.readAsBinaryString(obj);
+				    //var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
+				    var uinforeader = new FileReader();
+				    uinforeader.onload = function(e) {
+				    	  var infoarray = new Uint8Array(e.target.result);
+				    	  //alert(uintToString(infoarray));
+				    	  buinfo = JSON.parse(uintToString(infoarray));
+						  var isme = (buinfo.userid == CHAT.userid) ? true : false;
+						  
+						  var usernameDiv = document.createElement("span");
+						  usernameDiv.innerHTML = isme?CHAT.username:buinfo.username;
+						  //var usernameDiv = '<span>'+msg.username+'</span>';
+						  var section = d.createElement('section');
+						  if(isme){
+							  section.className = 'user';
+							  section.appendChild(contentDiv);
+							  section.appendChild(usernameDiv);
+						  } else {
+							  section.className = 'service';
+							  section.appendChild(usernameDiv);
+							  section.appendChild(contentDiv);
+						  }
+						  CHAT.msgObj.appendChild(section);
+				    	};
+				    //如果Blob中包含字符串且不需要解码，则需要readAsBinaryString()方法解析
+					//uinforeader.readAsBinaryString(blobuinfo);
+				    //如果Blob中包含的字符串还需要解码，则需要readAsArrayBuffer()获得ArrayBuffer，并使用Uint8Array对象对其进行解析
+				    uinforeader.readAsArrayBuffer(blobuinfo);
 		    	};
-		    reader.readAsDataURL(blobct);
-		    //reader.readAsBinaryString(obj);
-		    //var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
-		    var idreader = new FileReader();
-			idreader.onload = function(e) {
-				  bid = e.target.result;
-				  var isme = (bid == CHAT.userid) ? true : false;
-				  
-				  var usernameDiv = document.createElement("span");
-				  usernameDiv.innerHTML = isme?CHAT.username:CHAT.imgusername;
-				  //var usernameDiv = '<span>'+msg.username+'</span>';
-				  var section = d.createElement('section');
-				  if(isme){
-					  section.className = 'user';
-					  section.appendChild(contentDiv);
-					  section.appendChild(usernameDiv);
-				  } else {
-					  section.className = 'service';
-					  section.appendChild(usernameDiv);
-					  section.appendChild(contentDiv);
-				  }
-				  CHAT.msgObj.appendChild(section);
-		    	};
-		    //idreader.readAsArrayBuffer(blobid);
-		    //如果Blob中包含字符串，则需要readAsBinaryString()方法解析
-		    idreader.readAsBinaryString(blobid);
+		    sizereader.readAsBinaryString(blobuinfosize);
 		}else{
 			var msg = JSON.parse(obj);
 			if(msg.action!=null&&(msg.action=="login"||msg.action=="logout")){
@@ -275,6 +284,13 @@
 		}
 		CHAT.lasttime = nowtime;
 	}
+	
+	function uintToString(uintArray) {
+	    var encodedString = String.fromCharCode.apply(null, uintArray),
+	    decodedString = decodeURIComponent(escape(encodedString));
+	    return decodedString;
+	}
+	
 	//通过“回车”提交用户名
 	d.getElementById("username").onkeydown = function(e) {
 		e = e || event;
@@ -343,7 +359,6 @@
 						onlineCount: "",
 						onlineUsers:null
 					};
-			   CHAT.socket.send(JSON.stringify(obj));
 			   //var filecontent = file.slice();
 			   //alert(file.type);
 			   CHAT.socket.send(file);
