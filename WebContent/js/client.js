@@ -194,10 +194,6 @@
 					section.innerHTML = usernameDiv + contentDiv;
 				}
 				CHAT.msgObj.appendChild(section);
-			}else if(msg.action!=null&&msg.action=="img"){
-				CHAT.isimg=true;
-				CHAT.imgusername=msg.username;
-				CHAT.imguserid=msg.userid;
 			}
 		}
 		
