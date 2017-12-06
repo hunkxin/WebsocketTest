@@ -41,7 +41,9 @@
 					userid: this.userid,
 					username: this.username,
 					time:stdTime(),
-					content: content
+					content: content,
+					onlineCount:null,
+					onlineUsers:null
 				};
 				//this.socket.emit('message', obj);
 				this.socket.send(JSON.stringify(obj));
@@ -112,8 +114,6 @@
 			
 			//连接websocket后端服务器
 			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket");
-			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/websocket?type=client");
-			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket?type=client");
 			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/ctiwebsocket?type=client");
 			this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/ctiwebsocket?type=client");
 			//this.socket = new WebSocket("ws://localhost:8040");

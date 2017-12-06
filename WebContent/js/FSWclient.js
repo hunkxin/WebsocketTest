@@ -111,12 +111,9 @@
 			this.scrollToBottom();
 			
 			//连接websocket后端服务器
-			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket");
-			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/websocket?type=client");
-			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket?type=client");
-			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/ctiwebsocket?type=client");
-			this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/ctiwebsocket?type=client");
-			//this.socket = new WebSocket("ws://localhost:8040");
+			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/websocket");
+			this.socket = new WebSocket("ws://192.168.1.168:8040");
+			
 			socketutil(this.socket);
 		}
 	};
@@ -207,28 +204,34 @@
 	
 	function socketutil(websocket){
       	//连接发生错误的回调方法
-            websocket.onerror = function(){
+            websocket.onerror = function(event){
             	//var logoutmsg = {action:"logout",userid:CHAT.userid, username:CHAT.username,time:stdTime()};
             	//websocket.send(JSON.stringify(logoutmsg));
-            	console.log("wrong!!!");
+            	//alert("wrong!!!");
+            	console.log(event);
             };
              
             //连接成功建立的回调方法
             websocket.onopen = function(event){
-            	var loginmsg = {action:"login",userid:CHAT.userid, username:CHAT.username,time:stdTime(),onlineCount:"",onlineUsers:[{"username":""}]};
+            	//var loginmsg = {action:"login",userid:CHAT.userid, username:CHAT.username,time:stdTime(),onlineCount:"",onlineUsers:[{"username":""}]};
+            	var loginmsg = "myheader=fsw\/n\/r\/n\/r\/n";
+            	console.log(loginmsg);
             	//alert(JSON.stringify(loginmsg));
-            	websocket.send(JSON.stringify(loginmsg));
+            	//websocket.send(JSON.stringify(loginmsg));
+            	websocket.send(loginmsg);
             }
              
             //接收到消息的回调方法
             websocket.onmessage = function(event){
+            	console.log(event.data);
                 setMessageInnerHTML(event.data);
             }
              
             //连接关闭的回调方法
             websocket.onclose = function(event){
             	//alert("close!!!");
-            	console.log("close:"+event.code);
+            	console.log(event.code);
+            	//alert(event.reason);
             }
              
             //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。

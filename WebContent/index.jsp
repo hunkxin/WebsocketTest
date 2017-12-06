@@ -24,7 +24,7 @@
             <div style="background:#3d3d3d;height: 28px; width: 100%;font-size:12px;">
                 <div style="line-height: 28px;color:#fff;">
                     <span style="text-align:left;margin-left:10px;">Websocket多人聊天室</span>
-                    <span style="float:right; margin-right:10px;"><span id="showusername"></span> | 
+                    <span style="float:right; margin-right:10px;"><span id="showusername"></span>
 					<a href="javascript:;" onclick="CHAT.logout()" style="color:#fff;">退出</a></span>
                 </div>
             </div>

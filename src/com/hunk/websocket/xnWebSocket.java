@@ -21,8 +21,8 @@ import com.hunk.bean.UserInfo;
 import com.hunk.bean.Username;
  
 //该注解用来指定一个URI，客户端可以通过这个URI来连接到WebSocket。类似Servlet的注解mapping。无需在web.xml中配置。
-@ServerEndpoint("/websocket")
-public class MyWebSocket {
+@ServerEndpoint("/ctiwebsocket")
+public class xnWebSocket {
     //静态变量，用来记录当前在线连接数。应该把它设计成线程安全的。
     private static int onlineCount = 0;
     
@@ -31,8 +31,8 @@ public class MyWebSocket {
     //CopyOnWriteArrayList/Set是ArrayList/Set 的一个线程安全的变体，其中所有可变操作（add、set等等）都是通过对底层数组进行一次新的复制来实现的。
     //当迭代线程数大于修改线程数时，CopyOnWriteArrayList的性能优于同步的ArrayList，反之，同步的ArrayList优于CopyOnWriteArrayList。CopyOnWriteArraySet同理。
     //concurrent包的线程安全Set，用来存放每个客户端对应的MyWebSocket对象。若要实现服务端与单一客户端通信的话，可以使用Map来存放，其中Key可以为用户标识
-    private static CopyOnWriteArraySet<MyWebSocket> webSocketSet = new CopyOnWriteArraySet<MyWebSocket>();
-    private static CopyOnWriteArraySet<MyWebSocket> webSocketSet_s = new CopyOnWriteArraySet<MyWebSocket>();
+    private static CopyOnWriteArraySet<xnWebSocket> webSocketSet = new CopyOnWriteArraySet<xnWebSocket>();
+    private static CopyOnWriteArraySet<xnWebSocket> webSocketSet_s = new CopyOnWriteArraySet<xnWebSocket>();
      
     //与某个客户端的连接会话，需要通过它来给客户端发送数据
     private Session session;
@@ -42,6 +42,7 @@ public class MyWebSocket {
     
     //判断是否是服务器
     private boolean isServer;
+    
     /**
      * 连接建立成功调用的方法
      * @param session  可选的参数。session为与某个客户端的连接会话，需要通过它来给客户端发送数据
@@ -54,12 +55,13 @@ public class MyWebSocket {
         	webSocketSet_s.add(this);
         	addOnlineSvrCount();
         	this.isServer = true;
+        	System.out.println("有新连接加入！当前在线节点数为" + getOnlineSvrCount());
         }else{
         	webSocketSet.add(this);     //加入set中
             addOnlineCount();           //在线数加1
             this.isServer = false;
+            System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
         }
-        System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
         System.out.println(usertype);
     }
      
@@ -82,14 +84,14 @@ public class MyWebSocket {
         	else
         		this.user.setOnlineCount(String.valueOf(onlineSvrCount));
             List<Username> usernames = new ArrayList<Username>();
-            for(MyWebSocket item: webSocketSet){
+            for(xnWebSocket item: webSocketSet){
             	usernames.add(new Username(item.user.getUsername()));
             }
-            for(MyWebSocket item: webSocketSet_s){
+            for(xnWebSocket item: webSocketSet_s){
             	usernames.add(new Username(item.user.getUsername()));
             }
             this.user.setOnlineUsers(usernames);
-            for(MyWebSocket item: webSocketSet){
+            for(xnWebSocket item: webSocketSet){
             	try {
             		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
         		} catch (IOException e) {
@@ -97,7 +99,7 @@ public class MyWebSocket {
         			e.printStackTrace();
         		}
             }
-            for(MyWebSocket item: webSocketSet_s){
+            for(xnWebSocket item: webSocketSet_s){
             	try {
             		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
         		} catch (IOException e) {
@@ -124,36 +126,39 @@ public class MyWebSocket {
         	}
         	this.user.setOnlineCount(String.valueOf(onlineCount));
             List<Username> usernames = new ArrayList<Username>();
-            for(MyWebSocket item: webSocketSet){
+//            for(xnWebSocket item: webSocketSet){
+//            	usernames.add(new Username(item.user.getUsername()));
+//            }
+//            for(xnWebSocket item: webSocketSet_s){
+//            	usernames.add(new Username(item.user.getUsername()));
+//            }
+//            this.user.setOnlineUsers(usernames);
+            for(xnWebSocket item: webSocketSet){
             	usernames.add(new Username(item.user.getUsername()));
+                try {
+                	if (session.isOpen()){
+                		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
+                	}
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    continue;
+                }
             }
-            for(MyWebSocket item: webSocketSet_s){
+            for(xnWebSocket item: webSocketSet_s){
             	usernames.add(new Username(item.user.getUsername()));
+                try {
+                	if (session.isOpen()){
+                		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
+                	}
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    continue;
+                }
             }
             this.user.setOnlineUsers(usernames);
-            for(MyWebSocket item: webSocketSet){             
-                try {
-                	if (session.isOpen()){
-                		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
-                	}
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    continue;
-                }
-            }
-            for(MyWebSocket item: webSocketSet_s){             
-                try {
-                	if (session.isOpen()){
-                		item.sendMessage((new ObjectMapper()).writeValueAsString(this.user));
-                	}
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    continue;
-                }
-            }
         }else{
-        	//群发消息
-            for(MyWebSocket item: webSocketSet){             
+        	//群发消息，真实cti运用环境中不能群发
+            for(xnWebSocket item: webSocketSet){             
                 try {
                 	if (session.isOpen()){
                 		item.sendMessage(message);
@@ -163,15 +168,26 @@ public class MyWebSocket {
                     continue;
                 }
             }
-            for(MyWebSocket item: webSocketSet_s){             
-                try {
-                	if (session.isOpen()){
-                		item.sendMessage(message);
-                	}
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    continue;
-                }
+            //在此要判断消息类型是否是json格式，如果是，说明是客户端发来的消息，否则是服务器端发来的消息
+            //是否要对服务器的消息进行分类？
+            String ctimsg = checkctimsg(message);
+            String pbxid = "";
+            if(ctimsg != null && !("".equals(ctimsg))){
+    			pbxid = GetBodyItem(ctimsg,"pbxid");		
+    		}
+            System.out.println("pbxid:"+pbxid);
+            for(xnWebSocket item: webSocketSet_s){ 
+            	if(pbxid.equals(item.user.getUsername())){
+            		try {
+                    	if (session.isOpen()){
+                    		item.sendMessage(ctimsg);
+                    	}
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        //continue;
+                    }
+            		break;
+            	}
             }
         }
         //System.out.println((new ObjectMapper()).writeValueAsString(this.user));
@@ -188,7 +204,7 @@ public class MyWebSocket {
     	//System.out.println("来自客户端的图片！！！"+last+"bb:"+bb.limit());
         try {  
             if (session.isOpen()) {
-            	for(MyWebSocket item: webSocketSet){
+            	for(xnWebSocket item: webSocketSet){
             		//item.session.getBasicRemote().sendBinary(bb, last);
             		item.session.getBasicRemote().sendBinary(bb, false);
             		if(last){
@@ -289,6 +305,52 @@ public class MyWebSocket {
 //    	String[] tmp = message.split("\",\"");
 //    	return tmp;
 //    }
+
+	private String GetMsgPara(String src, String key, String s, String e, int sdelenum){
+		String res = "";
+        if("".equals(src))return "";
+        int f1,f2,f3;
+
+        if(src.indexOf(key+s)<0) return "";
+
+        f1=src.indexOf(key+s,0);
+        
+        f2=src.indexOf(s,f1);
+        
+        f3=src.indexOf(e,f1);
+        
+        res=src.substring(f2+1+sdelenum,f3).replace("\r","").replace("\n","");/* 对于没有\r\n的字符串也不会有影响 */
+        
+        return res+"";
+	}
+
+	private String GetBodyItem(String src,String key)/* 获取key=val&中的val值 */
+	{
+		return GetMsgPara(src,key,"=","&",0);
+	}
+	
+	private String checkctimsg(String message){
+		String ctimsg = "";
+		UserInfo uinfo  = new UserInfo();
+		try {
+    		uinfo = (new ObjectMapper()).readValue(message, uinfo.getClass());
+    		//List<Entity> myObjects = mapper.readValue(message, mapper.getTypeFactory().constructCollectionType(List.class, entity.getClass()));
+    		ctimsg = uinfo.getContent();
+    		System.out.println(ctimsg);
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			System.out.println("JsonParseException");
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			System.out.println("JsonMappingException");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return ctimsg;
+	}
 	
 	private String setsizetostring(int size){
 		String ssize = String.valueOf(size);
@@ -307,11 +369,11 @@ public class MyWebSocket {
     }
  
     public static synchronized void addOnlineCount() {
-        MyWebSocket.onlineCount++;
+        xnWebSocket.onlineCount++;
     }
      
     public static synchronized void subOnlineCount() {
-        MyWebSocket.onlineCount--;
+        xnWebSocket.onlineCount--;
     }
     
     public static synchronized int getOnlineSvrCount() {
@@ -319,10 +381,10 @@ public class MyWebSocket {
     }
  
     public static synchronized void addOnlineSvrCount() {
-    	MyWebSocket.onlineSvrCount++;
+    	xnWebSocket.onlineSvrCount++;
     }
      
     public static synchronized void subOnlineSvrCount() {
-    	MyWebSocket.onlineSvrCount--;
+    	xnWebSocket.onlineSvrCount--;
     }
 }
