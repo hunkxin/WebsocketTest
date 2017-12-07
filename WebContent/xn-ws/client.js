@@ -19,6 +19,7 @@
 		userid:null,
 		lasttime:0,
 		socket:null,
+		cti:null,
 		//让浏览器滚动条保持在最低部
 		scrollToBottom:function(){
 			w.scrollTo(0, this.msgObj.clientHeight);
@@ -26,17 +27,17 @@
 		//退出，本例只是一个简单的刷新
 		logout:function(){
 			//this.socket.disconnect();
-			if(this.socket!=null){
-				this.socket.close();
-				this.socket=null;
+			if(this.cti!=null){
+				this.cti.CtiDisconnect();
+				this.cti=null;
 			}
-			location.reload();
+			//location.reload();
 		},
 		//提交聊天消息内容
 		submit:function(){
 			var content = d.getElementById("content").value;
 			if(content != ''){
-				var obj = {
+				/*var obj = {
 					action:"message",
 					userid: this.userid,
 					username: this.username,
@@ -44,9 +45,10 @@
 					content: content,
 					onlineCount:null,
 					onlineUsers:null
-				};
+				};*/
 				//this.socket.emit('message', obj);
-				this.socket.send(JSON.stringify(obj));
+				//this.socket.send(JSON.stringify(obj));
+				this.cti.send(content);
 				d.getElementById("content").value = '';
 			}
 			return false;
@@ -57,7 +59,7 @@
 		//更新系统消息，本例中在用户加入、退出的时候调用
 		updateSysMsg:function(o, action){
 			//当前在线用户列表
-			var onlineUsers = o.onlineUsers;
+			//var onlineUsers = o.onlineUsers;
 			//当前在线人数
 			var onlineCount = o.onlineCount;
 			//新加入用户的信息
@@ -66,13 +68,13 @@
 				
 			//更新在线人数
 			var userhtml = '';
-			var separator = '、';
-			for(var i=0;i<onlineUsers.length;i++) {
-				userhtml += onlineUsers[i].username;
-				if(i==onlineUsers.length-1)
-					separator = '';
-				userhtml += separator;
-		    }
+//			var separator = '、';
+//			for(var i=0;i<onlineUsers.length;i++) {
+//				userhtml += onlineUsers[i].username;
+//				if(i==onlineUsers.length-1)
+//					separator = '';
+//				userhtml += separator;
+//		    }
 			d.getElementById("onlinecount").innerHTML = '当前共有 '+onlineCount+' 人在线，在线列表：'+userhtml;
 			
 			//添加系统消息
@@ -96,7 +98,7 @@
 				d.getElementById("loginbox").style.display = 'none';
 				d.getElementById("chatbox").style.display = 'block';
 				this.init(username);
-				initdrop();
+				//initdrop();
 			}
 			return false;
 		},
@@ -106,100 +108,103 @@
 			实际项目中，如果是需要用户登录，那么直接采用用户的uid来做标识就可以
 			*/
 			this.userid = this.genUid();
-			this.username = username;
+			this.username = "20171204105449A9H8pvMqaIt79E1qUU";
 			
 			d.getElementById("showusername").innerHTML = this.username;
 			this.msgObj.style.minHeight = (this.screenheight - db.clientHeight + this.msgObj.clientHeight) + "px";
 			this.scrollToBottom();
 			
+			this.cti = new ClassXnCtiClient();
+			this.cti.CTIConnectedEvent = function()
+            {
+				var obj = {
+						onlineCount : 1,
+						username : this.UserID,
+						time : stdTime()
+				};
+				CHAT.updateSysMsg(obj,'login');
+				//console.log("CtiConnect");
+            };
+            var msg = {
+            		userid : "",
+            		showmsg : ""
+            		};
+            this.cti.EVENT_ExtStateChanged = function(deviceid,devicestate,pbxid,laststate,floatdata){
+            	msg.userid = deviceid;
+            	msg.userid = deviceid+":"+devicestate+":"+pbxid+":"+laststate+":"+floatdata;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_AgentStateChanged = function(agentid,agentstate,pbxid,laststate,floatdata){
+            	msg.userid = agentid;
+            	msg.userid = agentid+":"+agentstate+":"+pbxid+":"+laststate+":"+floatdata;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_ChannelStateChanged = function(channel,channelstate,pbxid,laststate,ext,floatdata){
+            	msg.userid = ext;
+            	msg.userid = channel+":"+channelstate+":"+pbxid+":"+laststate+":"+ext+":"+floatdata;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_AgentCallined = function(caller,pbxid,callerchannel,fromqueue,callid,agentid,context,exten,floatinfo){
+            	msg.userid = agentid;
+            	msg.userid = caller+":"+pbxid+":"+pbxid+":"+callerchannel+":"+fromqueue+":"+callid+":"+agentid+":"+context+":"+exten+":"+floatinfo;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_MeEventHanpend = function(pbxid,eventtype,me,member,memidx,activechannel,floatinfo){
+            	msg.userid = member;
+            	msg.userid = pbxid+":"+eventtype+":"+me+":"+member+":"+memidx+":"+activechannel+":"+floatinfo;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_NewQueueEvent = function(queue,join,joincaller,jcchannel,callid,pbxid,floatinfo){
+            	msg.userid = "";
+            	msg.userid = queue+":"+join+":"+joincaller+":"+jcchannel+":"+callid+":"+pbxid+":"+floatinfo;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_WXChatIn = function(fromghid,fromwxuserid,agentid,content,msgtype){
+            	msg.userid = agentid;
+            	msg.userid = fromghid+":"+fromwxuserid+":"+agentid+":"+content+":"+msgtype;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.EVENT_CMDRES = function(imsg,rescode,pbxrescode,res,actionid){
+            	msg.userid = "";
+            	msg.userid = imsg+":"+rescode+":"+pbxrescode+":"+res+":"+actionid;
+            	setMessageInnerHTML(JSON.stringify(msg));
+            };
+            this.cti.CTIDisConnectedEvent = function(){
+            	logmsg("closed!");
+            };
+			this.cti.CtiConnectEx("http://localhost:8383/CCCMSManage/pbxnode/CTImng/Cticonfigmnggetmsg",this.username,"3efd468cd161868b5a12f43f518e157d",this.cti);
+			
 			//连接websocket后端服务器
 			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket");
 			//this.socket = new WebSocket("ws://localhost:8383/WebsocketTest/ctiwebsocket?type=client");
-			this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/ctiwebsocket?type=client");
+			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/ctiwebsocket?type=client");
 			//this.socket = new WebSocket("ws://localhost:8040");
-			socketutil(this.socket);
+			//socketutil(this.socket);
 		}
 	};
 	
+	function logmsg(msg)
+	{
+		console.log(msg);
+	}
+	
 	//监听消息发送
 	function setMessageInnerHTML(obj){
-		if(obj instanceof Blob){
-			showtime();
-			//alert(obj.size);
-			var uinfosize = 0;
-			var blobuinfosize = obj.slice(-8);
-			var sizereader = new FileReader();
-			sizereader.onload = function(evt) {
-					uinfosize = parseInt(evt.target.result);
-					var buinfo = {};
-					var blobuinfo = obj.slice(-uinfosize-8,-8);
-					//alert(blobuinfo.size);
-					
-					var blobct = obj.slice(0,obj.size-uinfosize);
-					var contentDiv = document.createElement("img");
-					//var contentDiv = document.createElement("video");
-					contentDiv.height=100;
-					var reader = new FileReader();
-				    reader.onload = function(e) {
-						  //alert(e.target.result);
-						  //aVdo.play();
-						  //window.URL.revokeObjectURL(obj_url);
-						  contentDiv.src = e.target.result;
-						  //contentDiv.play();
-				    	};
-				    //对于图片或视频流，可以使用readAsBinaryString()方法直接生成DataURL供元素调用
-				    reader.readAsDataURL(blobct);
-				    //reader.readAsBinaryString(obj);
-				    //var isme = (CHAT.imguserid == CHAT.userid) ? true : false;
-				    var uinforeader = new FileReader();
-				    uinforeader.onload = function(e) {
-				    	  var infoarray = new Uint8Array(e.target.result);
-				    	  //alert(uintToString(infoarray));
-				    	  buinfo = JSON.parse(uintToString(infoarray));
-						  var isme = (buinfo.userid == CHAT.userid) ? true : false;
-						  
-						  var usernameDiv = document.createElement("span");
-						  usernameDiv.innerHTML = isme?CHAT.username:buinfo.username;
-						  //var usernameDiv = '<span>'+msg.username+'</span>';
-						  var section = d.createElement('section');
-						  if(isme){
-							  section.className = 'user';
-							  section.appendChild(contentDiv);
-							  section.appendChild(usernameDiv);
-						  } else {
-							  section.className = 'service';
-							  section.appendChild(usernameDiv);
-							  section.appendChild(contentDiv);
-						  }
-						  CHAT.msgObj.appendChild(section);
-				    	};
-				    //如果Blob中包含字符串且不需要解码，则需要readAsBinaryString()方法解析
-					//uinforeader.readAsBinaryString(blobuinfo);
-				    //如果Blob中包含的字符串还需要解码，则需要readAsArrayBuffer()获得ArrayBuffer，并使用Uint8Array对象对其进行解析
-				    uinforeader.readAsArrayBuffer(blobuinfo);
-		    	};
-		    sizereader.readAsBinaryString(blobuinfosize);
-		}else{
-			var msg = JSON.parse(obj);
-			if(msg.action!=null&&(msg.action=="login"||msg.action=="logout")){
-				CHAT.updateSysMsg(msg, msg.action);
-			}else if(msg.action!=null&&msg.action=="message"){
-				showtime();
-				var isme = (msg.userid == CHAT.userid) ? true : false;
-				var contentDiv = '<div>'+msg.content+'</div>';
-				var usernameDiv = '<span>'+msg.username+'</span>';
-				
-				var section = d.createElement('section');
-				if(isme){
-					section.className = 'user';
-					section.innerHTML = contentDiv + usernameDiv;
-				} else {
-					section.className = 'service';
-					section.innerHTML = usernameDiv + contentDiv;
-				}
-				CHAT.msgObj.appendChild(section);
-			}
+		var msg = JSON.parse(obj);
+		showtime();
+		var isme = (msg.userid == CHAT.cti.UserID) ? true : false;
+		var contentDiv = '<div>'+msg.content+'</div>';
+		var usernameDiv = '<span>'+msg.username+'</span>';
+		
+		var section = d.createElement('section');
+		if(isme){
+			section.className = 'user';
+			section.innerHTML = contentDiv + usernameDiv;
+		} else {
+			section.className = 'service';
+			section.innerHTML = usernameDiv + contentDiv;
 		}
+		CHAT.msgObj.appendChild(section);
 		
 		//alert(CHAT.lasttime);
 		CHAT.scrollToBottom();	
@@ -293,111 +298,4 @@
 		}
 	};
 	
-	function initdrop(){
-		var dropbox;
-
-		dropbox = document.getElementById("inputdiv");
-		dropbox.addEventListener("dragenter", dragenter, false);
-		dropbox.addEventListener("dragover", dragover, false);
-		dropbox.addEventListener("drop", drop, false);
-	}
-
-	function dragenter(e) {
-		e.stopPropagation();
-		e.preventDefault();
-	}
-
-	function dragover(e) {
-		e.stopPropagation();
-		e.preventDefault();
-	}
-		
-	function drop(e) {
-		e.stopPropagation();
-		e.preventDefault();
-
-		var dt = e.dataTransfer;
-		var files = dt.files;
-
-		handleFiles(files);
-	}
-
-	function handleFiles(files) {
-		  for (var i = 0; i < files.length; i++) {
-		    var file = files[i];
-		    var videoType = /^image\//;
-		    //var videoType = /^video\//;
-		    
-		    if ( !videoType.test(file.type) ) {
-		      	continue;
-		    }
-		    
-		   if(file.size>(1024*1024*10)){
-			   for(var tmp in files){
-				   tmp.close();
-			   }
-			   alert("图片大小超过10M！");
-		   }else{
-			   var obj = {
-						action:"img",
-						userid: CHAT.userid,
-						username: CHAT.username,
-						time:stdTime(),
-						onlineCount: "",
-						onlineUsers:null
-					};
-			   //alert(file.type);
-			   CHAT.socket.send(file);
-		   }
-			
-			//this.socket.emit('message', obj);
-			
-		    //var video = document.createElement("video");
-		    //var video = document.getElementById("video");
-		    //video.classList.add("obj");
-		    //ideo.id="video";
-		    //video.file=file;
-		    
-		    //video.height=100;
-		    //var sc = document.createElement("source");
-		    //var obj_url = window.URL.createObjectURL(file);
-		    //sc.src = obj_url;
-		    //sc.type="video/mp4";
-		    //video.appendChild(sc);
-		    
-		    /*video.onload = function(e) {
-		        window.URL.revokeObjectURL(obj_url);
-		      }*/
-		    
-		    // 假设 "preview" 是将要展示图片的 div
-		    //preview = document.getElementById("preview");
-		    //preview.appendChild(video);
-		    //video.src = obj_url;
-		    //video.play();
-		    //window.URL.revokeObjectURL(obj_url);
-		    
-		    /*var reader = new FileReader();
-		    //alert(file.size);
-		    reader.onload = function(e) {
-				  var content = e.target.result; 
-				  alert(content);
-				  //aVdo.play();
-				  //window.URL.revokeObjectURL(obj_url);
-				  var obj = {
-							action:"message",
-							userid: this.userid,
-							username: this.username,
-							time:stdTime(),
-							content: content
-						};
-				  
-				  //this.socket.emit('message', obj);
-				  //CHAT.socket.send(JSON.stringify(obj));
-				  CHAT.socket.send(content);
-				  d.getElementById("content").value = '';
-		    	};
-		    //reader.readAsDataURL(file);
-		    reader.readAsBinaryString(file);*/
-		  }
-	}
 })();

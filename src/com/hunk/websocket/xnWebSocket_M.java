@@ -79,6 +79,7 @@ public class xnWebSocket_M {
      */
     @OnClose
     public void onClose(){
+    	System.out.println("closed!");
     	if(this.isServer == false){
     		webSocketSet.remove(this);  //从set中删除
             subOnlineCount();           //在线数减1
@@ -211,15 +212,16 @@ public class xnWebSocket_M {
         	if(this.isServer){
         		
         	}else{
+        		System.out.println(message);
         		if(ckAgCTILoginMsg(message)){
         			this.isConnected = true;
         		}else{
-        			try {
-						session.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+//        			try {
+//						session.close();
+//					} catch (IOException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
         		}
         	}
         }
@@ -251,32 +253,36 @@ public class xnWebSocket_M {
 		boolean status = false;
 		String type, thisDN, request;
 		type = thisDN = request = "";
-		JSONObject loginmsg = JSONObject.parseObject(message);
-		if(loginmsg == null){
-			return status;
-		}
-		type = loginmsg.getString("type");
-		if(!"login".equals(type)){
-			return status;
-		}
-		thisDN = loginmsg.getString("thisDN");
-		if(thisDN == null){
-			return status;
-		}
-		JSONObject msg = loginmsg.getJSONObject("message");
-		if(msg == null){
-			return status;
-		}
-		request = msg.getString("CtiConnect");
-		if(!"CtiConnect".equals(request)){
-			return status;
-		}
-		thisDN = msg.getString("thisDN");
-		if(thisDN == null){
-			return status;
-		}
-		status = true;
-		this.client.setAgentid(thisDN);
+		try {
+			JSONObject loginmsg = JSONObject.parseObject(message);
+			if(loginmsg == null){
+				return status;
+			}
+			type = loginmsg.getString("type");
+			if(!"login".equals(type)){
+				return status;
+			}
+			thisDN = loginmsg.getString("thisDN");
+			if(thisDN == null){
+				return status;
+			}
+			JSONObject msg = loginmsg.getJSONObject("message");
+			if(msg == null){
+				return status;
+			}
+			request = msg.getString("CtiConnect");
+			if(!"CtiConnect".equals(request)){
+				return status;
+			}
+			thisDN = msg.getString("thisDN");
+			if(thisDN == null){
+				return status;
+			}
+			status = true;
+			this.client.setAgentid(thisDN);
+		} catch (Exception e) {
+			// TODO: handle exception
+		}	
 		return status;
     }
     

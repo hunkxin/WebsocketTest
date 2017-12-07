@@ -75,12 +75,12 @@ ClassXnCtiClient.prototype.ShowTestMessage = function(msg)/* 在html元素集合
 ClassXnCtiClient.prototype.CtiConnectEx = function(tvsrooturl,agentguid,agentpwd,ctiobj)
 { 
    this.TvsUrl=tvsrooturl;
-   var url=tvsrooturl+"/tvsapi/tvs_ctiapi_c/getRealCtiHostInfo/1/";
+   var url=tvsrooturl+"?agentguid=";
    url=url+agentguid;//并未进行密码验证？
    $.ajax({
      url:url,
      dataType:'jsonp',//虽然数据格式是jsonp，但没有指定'jsonp'参数，所以和'json'格式是一样的
-     processData: false, 
+     processData: false,
      type:'get',
      success:function(data){
 		 
@@ -90,12 +90,12 @@ ClassXnCtiClient.prototype.CtiConnectEx = function(tvsrooturl,agentguid,agentpwd
 		   window.wsport=data.result.wsport;
 		   window.ctihost=data.result.ctihost;
 		   window.tslport=data.result.tslport;
-		   ctiobj.CtiConnect(window.ctihost,window.wsport); 
+		   ctiobj.thisDN=window.agentid;
+		   ctiobj.CtiConnect(window.ctihost,window.wsport);
 		   ctiobj.UserID=window.agentid;
 		   ctiobj.UserGuid=agentguid;
 		   ctiobj.UserPWD=agentpwd;
-		   ctiobj.UserExt=data.result.agentext;;
-		   ctiobj.UserID=window.agentid;
+		   ctiobj.UserExt=data.result.agentext;
 		   ctiobj.IP=window.ctihost;
 		   ctiobj.Port=window.wsport;
 	   }else{
@@ -143,22 +143,21 @@ ClassXnCtiClient.prototype.CtiConnect = function(IP, Port)
 		} 
     }
    
-    
      
     var xncti=this;
     if (ws.browserSupportsWebSockets()) {//判断浏览器是否自带ws功能
         this.websocket = new ws.webSocketClient();
-        
+        console.log("to here!!!");
         //websocket.setReliabilityOptions(ws.RO_ON);
     } else {
         var lMsg = ws.MSG_WS_NOT_SUPPORTED;
         showMessage(lMsg);
     }
-    var lURL = ws.getServerURL("ws", this.IP, this.Port, "/websocket");
+    var lURL = ws.getServerURL("ws", this.IP, this.Port, "/WebsocketTest/ctiwebsocket_m?type=client");
     var thisDN = this.thisDN;
     
     var data = {"request":"CtiConnect","thisDN":thisDN};
-    var lRes = this.websocket.logon(lURL, thisDN, $.toJSON(data), {/*连接ws服务器并发送登录消息 {type: "login", thisDN: thisDN, message: message } */
+    var lRes = this.websocket.logon(lURL, thisDN, $.toJSON(data), {
             //onOpen callback /* websocket事务设定 */
             OnOpen: function(aEvent) {
                 xncti.websocket.startKeepAlive({ immediate: false,interval :30000 });
@@ -334,7 +333,7 @@ ClassXnCtiClient.prototype.CheckWS = function()
         }
         return true;
 }
-ClassXnCtiClient.prototype.MsgHead = function(msgtype,msg,actionid)/* "MSGTYPE":msgtype|"MSG":msg|"MSGBODY":"actionid"=actionid& */
+ClassXnCtiClient.prototype.MsgHead = function(msgtype,msg,actionid)/* MSGTYPE:msgtype|MSG:msg|MSGBODY:actionid=&userid=& */
 {
   var msghead="MSGTYPE"+this.msgheadsplit+msgtype;
   msghead+=this.msgheadend;
@@ -344,6 +343,11 @@ ClassXnCtiClient.prototype.MsgHead = function(msgtype,msg,actionid)/* "MSGTYPE":
   msghead+="actionid";
   msghead+=this.msgbodysplit;
   msghead+=actionid;
+  msghead+=this.msgbodyend;
+  //add by hunk
+  msghead+="userid";
+  msghead+=this.msgbodysplit;
+  msghead+=window.agentid;
   msghead+=this.msgbodyend;
 
   return msghead;
@@ -592,7 +596,7 @@ ClassXnCtiClient.prototype.HoldCall = function()
 ///////////////////////////////////////////////////////////
 ///保持呼叫，让对方听音乐
 ///////////////////////////////////////////////////////////
-ClassXnCtiClient.prototype.Admin_HoldCall = function(deviceid,at, agentid,ifhold)
+ClassXnCtiClient.prototype.Admin_HoldCall = function(deviceid,at,agentid,ifhold)
 {
     if(!this.CheckWS())
     {
@@ -644,7 +648,7 @@ ClassXnCtiClient.prototype.RetriveCall = function()
 ///////////////////////////////////////////////////////////
 ///恢复呼叫
 ///////////////////////////////////////////////////////////
-ClassXnCtiClient.prototype.Admin_RetriveCall = function(deviceid,at, agentid,ifhold)
+ClassXnCtiClient.prototype.Admin_RetriveCall = function(deviceid,at,agentid,ifhold)
 {
     if(!this.CheckWS())
     {
@@ -1116,7 +1120,7 @@ ClassXnCtiClient.prototype.ConferenceCall = function(ct,confpartlist,meetroom)
 ///////////////////////////////////////////////////////////
 ///会议
 ///////////////////////////////////////////////////////////
-ClassXnCtiClient.prototype.Admin_ConferenceCall = function(deviceid,at, ct,confpartlist,meetroom)
+ClassXnCtiClient.prototype.Admin_ConferenceCall = function(deviceid,at,ct,confpartlist,meetroom)
 {
    if(!this.CheckWS())
     {
@@ -1197,7 +1201,6 @@ ClassXnCtiClient.prototype.InsertCall = function(inserteddevice,insertat)
     var cmd=this.MsgHead(MSGTYPE.CMD,MSGCLASS.CMD_Insert,MSGCLASS.CMD_Insert);
     cmd+=this.MsgBodyItem("deviceid",this.UserID);
     cmd+=this.MsgBodyItem("type",ACTIONTYPE.SELF);
-    cmd+=this.MsgBodyItem("conftype",ct);
     cmd+=this.MsgBodyItem("insertedtype",insertat);
     cmd+=this.MsgBodyItem("inserteddevice",inserteddevice);
     cmd+=this.msgend;
@@ -1229,7 +1232,6 @@ ClassXnCtiClient.prototype.Admin_InsertCall = function(deviceid,at,inserteddevic
     var cmd=this.MsgHead(MSGTYPE.CMD,MSGCLASS.CMD_Insert,MSGCLASS.CMD_Insert);
     cmd+=this.MsgBodyItem("deviceid",deviceid);
     cmd+=this.MsgBodyItem("type",at);
-    cmd+=this.MsgBodyItem("conftype",ct);
     cmd+=this.MsgBodyItem("insertedtype",insertat);
     cmd+=this.MsgBodyItem("inserteddevice",inserteddevice);
     cmd+=this.msgend;
