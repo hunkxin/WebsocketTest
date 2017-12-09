@@ -27,6 +27,13 @@ public class UT {
 		return str;
 	}
 	
+	public static boolean zstr(String str){
+		if(str == null)
+			return true;
+		else
+			return "".equals(str)?true:false;
+	}
+	
 	public static String errormsg(Exception e){
 		//return e.getClass().getName();
 		return e.getLocalizedMessage();

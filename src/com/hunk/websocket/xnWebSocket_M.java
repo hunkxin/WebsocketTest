@@ -15,6 +15,7 @@ import javax.websocket.server.ServerEndpoint;
 import com.alibaba.fastjson.JSONObject;
 import com.hunk.DUT.Agentsop;
 import com.hunk.DUT.CTIEnum;
+import com.hunk.DUT.UT;
 import com.hunk.bean.CtiClient;
 import com.hunk.bean.CtiServer;
  
@@ -62,13 +63,13 @@ public class xnWebSocket_M {
         	webSocketSet_s.add(this);
         	addOnlineSvrCount();
         	this.isServer = true;
-        	this.client = new CtiClient();
+        	this.server = new CtiServer();
         	System.out.println("有新连接加入！当前在线节点数为" + getOnlineSvrCount());
         }else{
         	webSocketSet.add(this);     //加入set中
             addOnlineCount();           //在线数加1
             this.isServer = false;
-            this.server = new CtiServer();
+            this.client = new CtiClient();
             System.out.println("有新连接加入！当前在线人数为" + getOnlineCount());
         }
         System.out.println(usertype);
@@ -104,7 +105,8 @@ public class xnWebSocket_M {
     				for(xnWebSocket_M item: webSocketSet){
     	                try {
     	                	if (session.isOpen()){
-    	                		item.sendMessage(message);
+    	                		if(!UT.zstr(item.client.getAgentid()))
+    	                			item.sendMessage(message);
     	                	}
     	                } catch (IOException e) {
     	                    e.printStackTrace();
@@ -113,48 +115,50 @@ public class xnWebSocket_M {
     			}else if("3".equals(msgtype)){//命令返回
     				String agentid = GetBodyItem(message,"userid");
     				for(xnWebSocket_M item: webSocketSet){
-    					if(item.client !=null && agentid.equals(item.client.getAgentid())){
-    						try {
-        	                	if (session.isOpen()){
-        	                		item.sendMessage(message);
-        	                	}
-        	                } catch (IOException e) {
-        	                    e.printStackTrace();
-        	                }
-							break;
-    					}
+						try {
+    	                	if (session.isOpen()){
+    	                		if(agentid.equals(item.client.getAgentid()))
+    	                			item.sendMessage(message);
+    	                	}
+    	                } catch (IOException e) {
+    	                    e.printStackTrace();
+    	                } catch(NullPointerException e1){}
+						break;
     	            }
     			}
-    		}else{//是客户端发来的命令
-    			int msgclass = Integer.parseInt(this.checkmsgclass(message));
-    			if(CTIEnum.CMD_Agentlogin == msgclass||CTIEnum.CMD_Agentloginoff == msgclass||CTIEnum.CMD_Makebusy == msgclass){//cti服务器直接处理
-    				Agentsop op = new Agentsop();
-    				ArrayList<CtiClient> contents = new ArrayList<CtiClient>();
+    		}else{//是客户端发来的命令或者是心跳消息
+    			if(checkCliWSMsg(message,"ping")){
+    				return;
+    			}
+    			
+    			//首先判断是否已登录，如果未登录，则只接收登录命令，其它命令一律拒绝执行
+    			int msgclass = 1;
+    			if(this.client.getAgentid()==null||"".equals(this.client.getAgentid())){
+    				try {
+        				msgclass = Integer.parseInt(this.checkmsgclass(message));
+    				} catch (Exception e) {
+    					// TODO: handle exception
+    				}
     				int rescode = 200;
+    				ArrayList<CtiClient> contents = new ArrayList<CtiClient>();
     				String name = "";
     				String loginext = "";
-    				String action = "";
     				if(CTIEnum.CMD_Agentlogin == msgclass){
-    					name = this.GetBodyItem(message,"agentid");
+    					Agentsop op = new Agentsop();
+        				name = this.GetBodyItem(message,"agentid");
     					String agentpwd = this.GetBodyItem(message,"agentpwd");
     					loginext = this.GetBodyItem(message,"loginext");
     					name = "".equals(name)?this.client.getAgentid():name;
     					rescode = op.agentlogin(name, agentpwd, loginext, contents);
-    				}else{
-    					if(CTIEnum.CMD_Makebusy == msgclass){
-        					action = "0".equals(this.GetBodyItem(message,"ifbusy"))?CTIEnum.available:CTIEnum.onbreak;
-        					name = this.GetBodyItem(message,"deviceid");
-        				}else{
-        					action = CTIEnum.logout;
-        					name = this.GetBodyItem(message,"agentid");
-        				}
-    					name = "".equals(name)?this.client.getAgentid():name;
-    					rescode = op.agentaction(name, action, contents);
+    				}else{//发送拒绝执行消息
+    					rescode = CTIEnum.AGENT_CANNOT_BE_ACTIONED_NOLOGIN;
     				}
-    				//发送命令执行结果消息
+    				if(rescode == CTIEnum.AGENTLOGINOK){
+    					this.client.setAgentid(name);
+    				}
     				String resmsg = getresmsg(msgclass, rescode);
     				for(xnWebSocket_M item: webSocketSet){
-    					if(item.client !=null && this.client.getAgentid().equals(item.client.getAgentid())){
+    					if(item==this){
     						try {
         	                	if (session.isOpen()){
         	                		item.sendMessage(resmsg);
@@ -165,7 +169,7 @@ public class xnWebSocket_M {
 							break;
     					}
     	            }
-    				//发送状态改变事件消息
+    				
     				boolean isomit = false;
     				String e_status = "";
     				String laststate = "";
@@ -175,36 +179,118 @@ public class xnWebSocket_M {
     						isomit = true;
     						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, this.getagentstate(laststate));
     					}
-    				}else if(rescode == CTIEnum.AGENTLOGOFF_OK){
-    					laststate = contents.get(0).getAgentlaststate();
-    					isomit = true;
-    					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_NOLOGIN, this.getagentstate(laststate));
-    				}else if(rescode == CTIEnum.AGENT_MAKEBUSY_OK){
-    					laststate = contents.get(0).getAgentlaststate();
-    					isomit = true;
-    					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, this.getagentstate(action), this.getagentstate(laststate));
     				}
+    				
     				if(isomit){
         				for(xnWebSocket_M item: webSocketSet){
     						try {
         	                	if (session.isOpen()){
-        	                		item.sendMessage(e_status);
+        	                		if(!UT.zstr(item.client.getAgentid())){
+        	                			item.sendMessage(e_status);
+            	                		if(this.client.getAgentid().equals(item.client.getAgentid())&&item!=this)
+            	                			webSocketSet.remove(item);//剔除前面重复账号登录的连接
+        	                		}
         	                	}
         	                } catch (IOException e) {
         	                    e.printStackTrace();
-        	                }
+        	                }catch(NullPointerException e1){}
         	            }
     				}
-    			}else{//群发给ctilink
-    				for(xnWebSocket_M item: webSocketSet_s){
-    	                try {
-    	                	if (session.isOpen()){
-    	                		item.sendMessage(message);
-    	                	}
-    	                } catch (IOException e) {
-    	                    e.printStackTrace();
-    	                }
-    	            }
+    			}else{
+    				try {
+        				msgclass = Integer.parseInt(this.checkmsgclass(message));
+    				} catch (Exception e) {
+    					// TODO: handle exception
+    				}
+        			if(CTIEnum.CMD_Agentlogin == msgclass||CTIEnum.CMD_Agentloginoff == msgclass||CTIEnum.CMD_Makebusy == msgclass){//cti服务器直接处理
+        				Agentsop op = new Agentsop();
+        				ArrayList<CtiClient> contents = new ArrayList<CtiClient>();
+        				int rescode = 200;
+        				String name = "";
+        				String loginext = "";
+        				String action = "";
+        				if(CTIEnum.CMD_Agentlogin == msgclass){
+        					name = this.GetBodyItem(message,"agentid");
+        					String agentpwd = this.GetBodyItem(message,"agentpwd");
+        					loginext = this.GetBodyItem(message,"loginext");
+        					name = "".equals(name)?this.client.getAgentid():name;
+        					rescode = op.agentlogin(name, agentpwd, loginext, contents);
+        				}else{
+        					if(CTIEnum.CMD_Makebusy == msgclass){
+            					action = "0".equals(this.GetBodyItem(message,"ifbusy"))?CTIEnum.available:CTIEnum.onbreak;
+            					name = this.GetBodyItem(message,"deviceid");
+            				}else{
+            					action = CTIEnum.logout;
+            					name = this.GetBodyItem(message,"agentid");
+            				}
+        					name = "".equals(name)?this.client.getAgentid():name;
+        					rescode = op.agentaction(name, action, contents);
+        				}
+        				if(rescode == CTIEnum.AGENTLOGINOK){
+        					this.client.setAgentid(name);
+        				}else if(rescode == CTIEnum.AGENTLOGOFF_OK){
+        					this.client.setAgentid("");
+        				}
+        				//发送命令执行结果消息
+        				String resmsg = getresmsg(msgclass, rescode);
+        				for(xnWebSocket_M item: webSocketSet){
+        					if(item==this){
+        						try {
+            	                	if (session.isOpen()){
+            	                		item.sendMessage(resmsg);
+            	                	}
+            	                } catch (IOException e) {
+            	                    e.printStackTrace();
+            	                }
+    							break;
+        					}
+        	            }
+        				//发送状态改变事件消息
+        				boolean isomit = false;
+        				String e_status = "";
+        				String laststate = "";
+        				if(rescode == CTIEnum.AGENTLOGINOK){
+        					laststate = contents.get(0).getAgentlaststate();
+        					if(!"".equals(laststate)){
+        						isomit = true;
+        						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, this.getagentstate(laststate));
+        					}
+        				}else if(rescode == CTIEnum.AGENTLOGOFF_OK){
+        					laststate = contents.get(0).getAgentlaststate();
+        					isomit = true;
+        					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_NOLOGIN, this.getagentstate(laststate));
+        				}else if(rescode == CTIEnum.AGENT_MAKEBUSY_OK){
+        					laststate = contents.get(0).getAgentlaststate();
+        					isomit = true;
+        					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, this.getagentstate(action), this.getagentstate(laststate));
+        				}
+        				if(isomit){
+            				for(xnWebSocket_M item: webSocketSet){
+        						try {
+            	                	if (session.isOpen()){
+            	                		if(!UT.zstr(item.client.getAgentid())){
+            	                			item.sendMessage(e_status);
+                	                		if(rescode == CTIEnum.AGENTLOGOFF_OK&&this.client.getAgentid().equals(item.client.getAgentid())&&item!=this)
+                	                			webSocketSet.remove(item);
+            	                		}
+            	                	}
+            	                } catch (IOException e) {
+            	                    e.printStackTrace();
+            	                }catch(NullPointerException e1){}
+            	            }
+        				}
+        			}else{//群发给ctilink
+        				for(xnWebSocket_M item: webSocketSet_s){
+        	                try {
+        	                	if (session.isOpen()){
+        	                		if(!UT.zstr(item.server.getPbxid()))
+        	                			item.sendMessage(message);
+        	                	}
+        	                } catch (IOException e) {
+        	                    e.printStackTrace();
+        	                }catch(NullPointerException e1){}
+        	            }
+        			}
     			}
     		}
         }else{
@@ -213,7 +299,7 @@ public class xnWebSocket_M {
         		
         	}else{
         		System.out.println(message);
-        		if(ckAgCTILoginMsg(message)){
+        		if(checkCliWSMsg(message,"login")){
         			this.isConnected = true;
         		}else{
 //        			try {
@@ -249,7 +335,7 @@ public class xnWebSocket_M {
         //this.session.getAsyncRemote().sendText(message);
     }
         
-	private boolean ckAgCTILoginMsg(String message){
+	private boolean checkCliWSMsg(String message, String typemsg){
 		boolean status = false;
 		String type, thisDN, request;
 		type = thisDN = request = "";
@@ -259,33 +345,40 @@ public class xnWebSocket_M {
 				return status;
 			}
 			type = loginmsg.getString("type");
-			if(!"login".equals(type)){
+			if(!typemsg.equals(type)){
 				return status;
 			}
 			thisDN = loginmsg.getString("thisDN");
 			if(thisDN == null){
 				return status;
 			}
-			JSONObject msg = loginmsg.getJSONObject("message");
-			if(msg == null){
-				return status;
-			}
-			request = msg.getString("CtiConnect");
-			if(!"CtiConnect".equals(request)){
-				return status;
-			}
-			thisDN = msg.getString("thisDN");
-			if(thisDN == null){
-				return status;
+			if("login".equals(typemsg)){
+				JSONObject msg = loginmsg.getJSONObject("message");
+				if(msg == null){
+					return status;
+				}
+				request = msg.getString("request");
+				if(!"CtiConnect".equals(request)){
+					return status;
+				}
+				String DN = msg.getString("thisDN");
+				if(!thisDN.equals(DN)){
+					return status;
+				}
+			}else{
+				String msg = loginmsg.getString("message");
+				if(msg == null){
+					return status;
+				}
 			}
 			status = true;
-			this.client.setAgentid(thisDN);
+			//this.client.setAgentid(thisDN);
 		} catch (Exception e) {
 			// TODO: handle exception
 		}	
 		return status;
     }
-    
+	    
 	private String GetMsgPara(String src, String key, String s, String e, int sdelenum){
 		String res = "";
         if("".equals(src))return "";
@@ -321,17 +414,17 @@ public class xnWebSocket_M {
 	private String getresmsg(int msgclass, int rescode){
 		String resmsg = "MSGTYPE:3|MSG:"
 				+ msgclass + "|MSGBODY:actionid="
-				+ msgclass + "@imsg=@rescode="
-				+ rescode + "@pbxrescode=@res=@";
+				+ msgclass + "&imsg=&rescode="
+				+ rescode + "&pbxrescode=&res=&@";
 		return resmsg;
 	}
 	
 	private String getscemsg(int msg, String agentid, int state, int laststate){
 		String resmsg = "MSGTYPE:3|MSG:"
 				+ msg + "|MSGBODY:agentid="
-				+ agentid + "@agentstate="
-				+ state + "@pbxid=@laststate="
-				+ laststate + "@floatdata=@";
+				+ agentid + "&agentstate="
+				+ state + "&pbxid=&laststate="
+				+ laststate + "&floatdata=&@";
 		return resmsg;
 	}
 	

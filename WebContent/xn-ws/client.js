@@ -29,9 +29,11 @@
 			//this.socket.disconnect();
 			if(this.cti!=null){
 				this.cti.CtiDisconnect();
-				this.cti=null;
+				//this.cti=null;
 			}
-			//location.reload();
+			if(this.cti.CheckWS())
+				logmsg("is still on!!");
+			location.reload();
 		},
 		//提交聊天消息内容
 		submit:function(){
@@ -108,7 +110,7 @@
 			实际项目中，如果是需要用户登录，那么直接采用用户的uid来做标识就可以
 			*/
 			this.userid = this.genUid();
-			this.username = "20171204105449A9H8pvMqaIt79E1qUU";
+			this.username = "2017120223261455VMNIitgFzK7NJ2cy";
 			
 			d.getElementById("showusername").innerHTML = this.username;
 			this.msgObj.style.minHeight = (this.screenheight - db.clientHeight + this.msgObj.clientHeight) + "px";
@@ -119,7 +121,7 @@
             {
 				var obj = {
 						onlineCount : 1,
-						username : this.UserID,
+						username : CHAT.cti.UserID,
 						time : stdTime()
 				};
 				CHAT.updateSysMsg(obj,'login');
@@ -131,48 +133,48 @@
             		};
             this.cti.EVENT_ExtStateChanged = function(deviceid,devicestate,pbxid,laststate,floatdata){
             	msg.userid = deviceid;
-            	msg.userid = deviceid+":"+devicestate+":"+pbxid+":"+laststate+":"+floatdata;
+            	msg.showmsg = deviceid+":"+devicestate+":"+pbxid+":"+laststate+":"+floatdata;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_AgentStateChanged = function(agentid,agentstate,pbxid,laststate,floatdata){
             	msg.userid = agentid;
-            	msg.userid = agentid+":"+agentstate+":"+pbxid+":"+laststate+":"+floatdata;
+            	msg.showmsg = agentid+":"+agentstate+":"+pbxid+":"+laststate+":"+floatdata;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_ChannelStateChanged = function(channel,channelstate,pbxid,laststate,ext,floatdata){
             	msg.userid = ext;
-            	msg.userid = channel+":"+channelstate+":"+pbxid+":"+laststate+":"+ext+":"+floatdata;
+            	msg.showmsg = channel+":"+channelstate+":"+pbxid+":"+laststate+":"+ext+":"+floatdata;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_AgentCallined = function(caller,pbxid,callerchannel,fromqueue,callid,agentid,context,exten,floatinfo){
             	msg.userid = agentid;
-            	msg.userid = caller+":"+pbxid+":"+pbxid+":"+callerchannel+":"+fromqueue+":"+callid+":"+agentid+":"+context+":"+exten+":"+floatinfo;
+            	msg.showmsg = caller+":"+pbxid+":"+pbxid+":"+callerchannel+":"+fromqueue+":"+callid+":"+agentid+":"+context+":"+exten+":"+floatinfo;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_MeEventHanpend = function(pbxid,eventtype,me,member,memidx,activechannel,floatinfo){
             	msg.userid = member;
-            	msg.userid = pbxid+":"+eventtype+":"+me+":"+member+":"+memidx+":"+activechannel+":"+floatinfo;
+            	msg.showmsg = pbxid+":"+eventtype+":"+me+":"+member+":"+memidx+":"+activechannel+":"+floatinfo;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_NewQueueEvent = function(queue,join,joincaller,jcchannel,callid,pbxid,floatinfo){
             	msg.userid = "";
-            	msg.userid = queue+":"+join+":"+joincaller+":"+jcchannel+":"+callid+":"+pbxid+":"+floatinfo;
+            	msg.showmsg = queue+":"+join+":"+joincaller+":"+jcchannel+":"+callid+":"+pbxid+":"+floatinfo;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_WXChatIn = function(fromghid,fromwxuserid,agentid,content,msgtype){
             	msg.userid = agentid;
-            	msg.userid = fromghid+":"+fromwxuserid+":"+agentid+":"+content+":"+msgtype;
+            	msg.showmsg = fromghid+":"+fromwxuserid+":"+agentid+":"+content+":"+msgtype;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.EVENT_CMDRES = function(imsg,rescode,pbxrescode,res,actionid){
-            	msg.userid = "";
-            	msg.userid = imsg+":"+rescode+":"+pbxrescode+":"+res+":"+actionid;
+            	msg.userid = "CTI Server";
+            	msg.showmsg = imsg+":"+rescode+":"+pbxrescode+":"+res+":"+actionid;
             	setMessageInnerHTML(JSON.stringify(msg));
             };
             this.cti.CTIDisConnectedEvent = function(){
             	logmsg("closed!");
             };
-			this.cti.CtiConnectEx("http://localhost:8383/CCCMSManage/pbxnode/CTImng/Cticonfigmnggetmsg",this.username,"3efd468cd161868b5a12f43f518e157d",this.cti);
+			this.cti.CtiConnectEx("http://localhost:8383/CCCMSManage/pbxnode/CTImng/Cticonfigmnggetmsg",CHAT.username,"f379eaf3c831b04de153469d1bec345e",CHAT.cti);
 			
 			//连接websocket后端服务器
 			//this.socket = new WebSocket("ws://192.168.1.128:8080/WebsocketTest/websocket");
@@ -193,8 +195,8 @@
 		var msg = JSON.parse(obj);
 		showtime();
 		var isme = (msg.userid == CHAT.cti.UserID) ? true : false;
-		var contentDiv = '<div>'+msg.content+'</div>';
-		var usernameDiv = '<span>'+msg.username+'</span>';
+		var contentDiv = '<div>'+msg.showmsg+'</div>';
+		var usernameDiv = '<span>'+msg.userid+'</span>';
 		
 		var section = d.createElement('section');
 		if(isme){

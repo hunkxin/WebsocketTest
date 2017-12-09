@@ -157,7 +157,8 @@ ClassXnCtiClient.prototype.CtiConnect = function(IP, Port)
     var thisDN = this.thisDN;
     
     var data = {"request":"CtiConnect","thisDN":thisDN};
-    var lRes = this.websocket.logon(lURL, thisDN, $.toJSON(data), {
+    //var lRes = this.websocket.logon(lURL, thisDN, $.toJSON(data), {
+    var lRes = this.websocket.logon(lURL, thisDN, data, {
             //onOpen callback /* websocket事务设定 */
             OnOpen: function(aEvent) {
                 xncti.websocket.startKeepAlive({ immediate: false,interval :30000 });
@@ -199,7 +200,7 @@ ClassXnCtiClient.prototype.parseMessage = function(data){
         msttype=parseInt(GetMsgPara(data,"MSGTYPE",':','|',0));
         msg=parseInt(GetMsgPara(data,"MSG",':','|',0));
         msgbody=GetMsgPara(data,"MSGBODY",':','@',0);
-        
+        console.log(data);
         if(msttype==""||msg==""||msgbody=="")
           {
                 
@@ -320,9 +321,9 @@ ClassXnCtiClient.prototype.parseMessage = function(data){
 ///////////////////////////////////////////////////////////
 ClassXnCtiClient.prototype.CtiDisconnect = function()
 {   
-    if (websocket.isConnected()) {
-            websocket.stopKeepAlive();
-            websocket.close();
+    if (this.websocket.isConnected()) {
+	    	this.websocket.stopKeepAlive();
+	    	this.websocket.close();
         }
 }
 ClassXnCtiClient.prototype.CheckWS = function()
