@@ -13,31 +13,42 @@ public class Agentsdo extends Dobase<CtiClient> {
 	
 	public String rowselsql(String id) {
 		String sqlcmd = "select count(`agentid`) as `exist`, `guid`, `agentid`, `agentmd5pwd`, `loginext`, `agentrole`, `agentext`, `agentlevel`, "
-				+ "`agentstate`, `ifrevcallin` from `fs_pbxnode_ctiagent` where `agentid`="+id;
+				+ "`agentstate`, `ifrevcallin` from `fs_pbxnode_ctiagent` where `agentid`='"+id+"'";
 		return sqlcmd;
 	}
 	
 	public String statusselsql(String name){
-		String sqlcmd = "select count(`agentid`) as `exist`, `name` as `agentid`, `status` as `agentstate` from `agents` where `name`="+name;
+		String sqlcmd = "select count(`name`) as `exist`, `name` as `agentid`, `status` as `agentstate` from `agents` where `name`='"+name+"'";
 		return sqlcmd;
 	}
 		
 	protected void getcontents(ResultSet res,ArrayList<CtiClient> contents,String cdt) throws SQLException{
-		while(res.next())
-		{
-			CtiClient content = new CtiClient(
-					res.getInt("exist"),
-					res.getString("guid"),
-					res.getString("agentid"),
-					res.getString("agentmd5pwd"),
-					res.getString("loginext"),
-					res.getString("agentrole"),
-					res.getString("agentext"),
-					res.getInt("agentlevel"),
-					res.getString("agentstate"),
-					"",
-					res.getInt("ifrevcallin"));
-			contents.add(content);
+		if("".equals(cdt)){
+			while(res.next())
+			{
+				CtiClient content = new CtiClient(
+						res.getInt("exist"),
+						res.getString("guid"),
+						res.getString("agentid"),
+						res.getString("agentmd5pwd"),
+						res.getString("loginext"),
+						res.getString("agentrole"),
+						res.getString("agentext"),
+						res.getInt("agentlevel"),
+						res.getString("agentstate"),
+						"",
+						res.getInt("ifrevcallin"));
+				contents.add(content);
+			}
+		}else{
+			while(res.next())
+			{
+				CtiClient content = new CtiClient(
+						res.getInt("exist"),
+						res.getString("agentid"),
+						res.getString("agentstate"));
+				contents.add(content);
+			}
 		}
 	}
 	
@@ -51,7 +62,7 @@ public class Agentsdo extends Dobase<CtiClient> {
 	
 	public ArrayList<String> getupdatesql(String ext, String status, String state, String agentname) {
 		ArrayList<String> sqls = new ArrayList<String>();
-		String sqlcmd = "update `fs_pbxnode_ctiagent` set `loginext` = '"+ext+"'";
+		String sqlcmd = "update `fs_pbxnode_ctiagent` set `loginext` = '"+ext+"' where `agentid` = '"+agentname+"'";
 		sqls.add(sqlcmd);
 		sqlcmd = "update `agents` set "
 				+"`status` =  '"+status+"',"

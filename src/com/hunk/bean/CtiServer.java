@@ -36,5 +36,11 @@ public class CtiServer {
 		this.pbxuser = pbxuser;
 		this.pbxpwd = pbxpwd;
 	}
-	public CtiServer(){}
+	public CtiServer(){
+		super();
+		this.pbxid = "";
+		this.pbxhost = "";
+		this.pbxuser = "";
+		this.pbxpwd = "";
+	}
 }

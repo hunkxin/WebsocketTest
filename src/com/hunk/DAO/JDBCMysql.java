@@ -47,8 +47,28 @@ public class JDBCMysql {
                     "user=freeswitch&password=freeswitch");
 		}else
 			con = DriverManager.getConnection(
-	   			"jdbc:mysql://"+dbip+":3306/FSWccc?" +
+	   			"jdbc:mysql://"+dbip+":3306/FSWccc?useUnicode=true&characterEncoding=utf-8&useSSL=false&" +
                 "user=freeswitch&password=freeswitch");
+
+        //System.out.println("database connected!");
+		return con;
+	}
+	
+	public Connection getconnect() throws SQLException {
+		
+		JDBCMysql.loaddriver();
+//	    Connection connection = null;
+//		String dbip = "127.0.0.1";
+		boolean ishome = true;
+		String dbip;
+		if(ishome){
+			dbip = "192.168.99.178";
+		}else
+			dbip = "192.168.1.78";
+	
+		con = DriverManager.getConnection(
+   			"jdbc:mysql://"+dbip+":3306/FSWcccob?useUnicode=true&characterEncoding=utf-8&useSSL=false&" +
+            "user=freeswitch&password=freeswitch");
 
         //System.out.println("database connected!");
 		return con;

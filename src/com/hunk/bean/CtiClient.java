@@ -93,5 +93,24 @@ public class CtiClient {
 		this.agentlaststate = agentlaststate;
 		this.ifrevcallin = ifrevcallin;
 	}
-	public CtiClient(){}
+	public CtiClient(int exist, String loginext, String agentstate) {
+		super();
+		this.exist = exist;
+		this.loginext = loginext;
+		this.agentstate = agentstate;
+	}
+	public CtiClient(){
+		super();
+		this.exist = 0;
+		this.guid = "";
+		this.agentid = "";
+		this.agentmd5pwd = "";
+		this.loginext = "";
+		this.agentrole = "";
+		this.agentext = "";
+		this.agentlevel = 0;
+		this.agentstate = "";
+		this.agentlaststate = "";
+		this.ifrevcallin = 0;
+	}
 }

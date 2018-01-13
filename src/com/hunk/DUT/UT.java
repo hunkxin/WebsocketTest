@@ -150,4 +150,11 @@ public class UT {
 	public static String NSinsert(String str, String dfval){
 		return "".equals(str)?dfval:str;
 	}
+	
+	public static boolean isPastT(long time){
+		long timenow = (new Date()).getTime()/1000;
+		if(time<timenow)
+			return true;
+		return false;
+	}
 }

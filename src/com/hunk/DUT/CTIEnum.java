@@ -27,6 +27,13 @@ public class CTIEnum {
 	public static final int CMD_ConfAction = 512;//会议控制操作
 	public static final int CMD_PbxCmd = 513;//PBXCLI命令
 	public static final int CMD_PbxAmiLogin = 514;//登录到PBX
+	public static final int CMD_Transfer_CANCEL= 515;
+	public static final int CMD_Transfer_GOON= 516;
+	public static final int CMD_Monitor_WISPERA= 517;
+	public static final int CMD_Monitor_WISPERB= 518;
+	public static final int CMD_Monitor_RESET= 519;
+	public static final int CMD_THREE_WAY= 520;
+	public static final int CMD_ObCall = 599;//自动外呼
 	
 	public static final int AGENTLOGINOK = 0;//登录成功
 	public static final int AGENTLOGINFAIL_ERR_AGENTID = 1;//登录失败，无效座席工号/调度员工号
@@ -63,6 +70,10 @@ public class CTIEnum {
 	public static final int CONF_CANNOTLOCK_MEETISNOTINMEETING = 42;//不能锁定会议室，因为会议室没有在使用状态
 	public static final int AGENT_CANNOTHOLD_ISNOLINK = 43;//不能呼叫保持因为没有在通话状态
 	public static final int AGENT_CANNOTUNHOLD_ISNOHOLD = 44;//不能取消保持因为当前状态不为HOLD
+	public static final int OBCALLPJ_ISALREADY_ON = 45;//外呼项目已经在运行中
+	public static final int OBCALLPJ_ISALREADY_PAUSE = 46;//外呼项目未运行
+	public static final int OBCALLPJ_ISALREADY_END = 47;//外呼项目已完成所有呼叫
+	public static final int OBCALLPJ_ISNOT_EXIST = 48;//外呼项目不存在
 	public static final int PBXOBJISNULL = 100;//PBX对象无效
 	public static final int PBXINNERERR = 200;//PBX内部错误
 	
@@ -89,4 +100,12 @@ public class CTIEnum {
 	public static final int AGENT_CALL_INSERT = 10;
 	public static final int AGENT_CALL_HOLD = 11;
 	public static final int AGENT_CALL_MONITOR = 12;
+	
+	public static final int OBCMDTYPE_START = 1;
+	public static final int OBCMDTYPE_PAUSE = 2;
+	public static final int OBCMDTYPE_RESTART = 3;
+	public static final int OBCMDTYPE_START_REMAINED = 4;
+	public static final int OBCMDTYPE_RE_CUS_FAILED = 5;
+	public static final int OBCMDTYPE_RE_AGT_FAILED = 6;
+	public static final int OBCMDTYPE_RE_CUS_SUCCESS = 7;
 }
