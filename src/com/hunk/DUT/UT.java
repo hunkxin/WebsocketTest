@@ -147,6 +147,10 @@ public class UT {
         return sb.toString();   
 	}
 	
+	public static int randomNum(int min, int max) {   
+        return (new Random()).nextInt(max-min+1)+min;   
+	}
+	
 	public static String NSinsert(String str, String dfval){
 		return "".equals(str)?dfval:str;
 	}

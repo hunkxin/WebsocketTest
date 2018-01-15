@@ -74,38 +74,29 @@ public class FswCtiServer {
 		return server;
 	}
 
-	private final class CmdExeThread implements Runnable{
+	private final class CmdExeThread extends Thread{
 		private boolean isPause;
 		private boolean isEnd;
 		private String pjid;
 		private int cmdtype;
 		private Projectbase pjbase;
 		private int interal;
+		private int interal_temp;
+		private long lastautoid;
+		private CallList lastnum;
 //		private long starttime;
 //		private long pausetime;
-		public boolean isPause() {
-			return isPause;
-		}
-		public void setPause(boolean isPause) {
-			this.isPause = isPause;
-		}
-		public boolean isEnd() {
-			return isEnd;
-		}
+//		public boolean isPause() {
+//			return isPause;
+//		}
+//		public void setPause(boolean isPause) {
+//			this.isPause = isPause;
+//		}
 		public void setEnd(boolean isEnd) {
 			this.isEnd = isEnd;
 		}
 		public String getPjid() {
 			return pjid;
-		}
-		public void setPjid(String pjid) {
-			this.pjid = pjid;
-		}
-		public int getCmdtype() {
-			return cmdtype;
-		}
-		public void setCmdtype(int cmdtype) {
-			this.cmdtype = cmdtype;
 		}
 		public CmdExeThread(String pjid, int cmdtype) {
 			super();
@@ -118,33 +109,51 @@ public class FswCtiServer {
 		public void run() {
 			// TODO Auto-generated method stub
 			while(true){
-				if(isEnd)
+				if(isEnd){
+					cmdExeThreads.remove(this);
+					subCmdExeThreadsCount();
+					//将结束的信息记录到数据库中（保存在最后一条pjid的任务记录中），只记录暂停时间
+					new Projectmngop().Updatepauseinfo(this.pjid, this.lastnum);
 					break;
+				}
 				if(isPause){
+					if(--this.interal_temp==0)
+						this.isPause = false;
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e) {
 						// TODO: handle exception
 					}
 				}else{
-					if(this.pjbase == null){//为空说明是重新开始的线程
-						int rescode = 200;
+					int rescode = 200;
+					ArrayList<CallList> calllist = new ArrayList<CallList>();
+					ArrayList<String> ALagentcount = new ArrayList<String>();
+					int listnum = 1;
+					Projectmngop op = new Projectmngop();
+					if(this.pjbase == null){//为空说明是重新开始的线程，需要获取项目相关配置信息
 						ArrayList<Projectbase> pjcontents = new ArrayList<Projectbase>();
-						ArrayList<CallList> calllist = new ArrayList<CallList>();
-						ArrayList<String> ALagentcount = new ArrayList<String>();
-						int listnum = 1;
-						Projectmngop op = new Projectmngop();
-						rescode = op.GetProfile(pjid, pjcontents);
+						rescode = op.GetProfile(pjid, cmdtype, pjcontents);
 						if(rescode!=0){//发送错误消息
-							
-							break;
+							String message = getresmsg(CTIEnum.CMD_ObCall, rescode);
+							for(FswCtiServer item: webSocketSet_a){//
+            	                try {
+        	                		if(!UT.zstr(item.getClient().getAgentid())){
+    	                				item.sendMessage(message);
+        	                		}
+            	                } catch (IOException e) {
+            	                    e.printStackTrace();
+            	                }catch(NullPointerException e1){}
+            	            }
+							this.isEnd = true;
+							continue;
 						}
 						this.pjbase = pjcontents.get(0);
 						try {
 							this.interal = Integer.parseInt(pjbase.getCallinterval());
+							if(this.interal<4) this.interal = 4;
 						} catch (NumberFormatException e) {
 							// TODO: handle exception
-							this.interal = 0;
+							this.interal = 4;
 						}
 //						try {
 //							this.starttime = Long.parseLong(pjbase.getStarttime());
@@ -162,19 +171,104 @@ public class FswCtiServer {
 //							
 //						}else//
 //							break;
-						rescode = op.GetAgentCount(this.pjbase.getQueueno(), ALagentcount);
-						if(rescode==0){
-							try {
-								listnum = (Integer.parseInt(ALagentcount.get(0)))*(Integer.parseInt(this.pjbase.getConcurrencyrate()))/100;
-							} catch (NumberFormatException e) {
-								// TODO: handle exception
-								listnum = 1;
+						
+					}
+					rescode = op.GetAgentCount(this.pjbase.getQueueno(), ALagentcount);
+					if(rescode==0){//根据空闲坐席数和呼叫系数得到这次要发送的号码清单
+						try {
+							listnum = (Integer.parseInt(ALagentcount.get(0)))*(Integer.parseInt(this.pjbase.getConcurrencyrate()))/100;
+						} catch (NumberFormatException e) {
+							// TODO: handle exception
+							listnum = 1;
+						}
+					}
+					if(listnum<1) listnum = 1;
+					rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, this.lastnum.getAutoid(), calllist);//这里要保证接着上一次的记录继续查找
+					if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END&&"0".equals(this.lastnum.getRetry())){//这里需要判断号码是否已经全部执行完，若只是执行完一轮，retry不为0，则从头开始继续执行，否则结束该线程
+						//号码全部执行完，结束该线程，发送消息给前端
+						String message = getresmsg(CTIEnum.CMD_ObCall, rescode);
+						for(FswCtiServer item: webSocketSet_a){//
+        	                try {
+    	                		if(!UT.zstr(item.getClient().getAgentid())){
+	                				item.sendMessage(message);
+    	                		}
+        	                } catch (IOException e) {
+        	                    e.printStackTrace();
+        	                }catch(NullPointerException e1){}
+        	            }
+						//保存任务结束信息
+						
+						this.isEnd = true;
+					}else{
+						if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END){//只是执行完一轮，retry不为0，则从头开始继续执行
+							rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, "0", calllist);
+						}
+						if(rescode==0){//发送命令到子节点
+							//拼装命令字符串，随机分发给子节点
+							String message = FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "");
+							
+							message+=FswCtiServer.SetBody("pjid",this.pjid);
+							
+							int list_num = calllist.size();
+							int svr_count = FswCtiServer.getOnlineSvrCount();
+							int t = 0;
+							if(svr_count>0){
+								int dispc_count = list_num/svr_count;
+								
+								for(FswCtiServer item: webSocketSet_s){//平均分发
+	            	                try {
+	        	                		if(!UT.zstr(item.getServer().getPbxid())){
+	        	                			for(int i=0;i<dispc_count;i++){
+	        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*dispc_count+i).getTelnum());
+	        	                				message+=FswCtiServer.msgend;
+	        	                				item.sendMessage(message);
+	        	                			}
+	        	                		}
+	            	                } catch (IOException e) {
+	            	                    e.printStackTrace();
+	            	                }catch(NullPointerException e1){}
+	            	                t++;
+	            	            }
+								if(list_num%svr_count>0){
+									int random = UT.randomNum(0, svr_count-1);
+									int j = 0;
+									for(FswCtiServer item: webSocketSet_s){//随机选一个分发剩余的号码
+										if(j<svr_count&&(j++ != random)){//防止webSocketSet_s的成员数和svr_count不相等的情况;判断是否被随机选择到
+											continue;
+										}
+		            	                try {
+		        	                		if(!UT.zstr(item.getServer().getPbxid())){
+		        	                			for(int i=0;i<list_num%svr_count;i++){
+		        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*svr_count+i).getTelnum());
+		        	                				message+=FswCtiServer.msgend;
+		        	                				item.sendMessage(message);
+		        	                			}
+		        	                			break;
+		        	                		}
+		            	                } catch (IOException e) {
+		            	                    e.printStackTrace();
+		            	                }catch(NullPointerException e1){}
+		            	            }
+								}
+								//将所发送的号码retry数减一，统一由CTI来调度，并记录最后一个发送号码的信息；记录已执行的电话总数
+								int temp;
+								try {
+									temp = Integer.parseInt(calllist.get(list_num-1).getRetry())-1;
+								} catch (NumberFormatException e) {
+									// TODO: handle exception
+									temp = 0;
+								}
+								if(temp<0) temp=0;
+								this.lastnum = new CallList(calllist.get(list_num-1).getAutoid(), 
+										calllist.get(list_num-1).getTelnum(), 
+										calllist.get(list_num-1).getTrycount(), 
+										String.valueOf(temp));
+								rescode = op.UpdateCallList(calllist);
 							}
 						}
-						if(listnum<1) listnum = 1;
-						rescode = op.GetCallList(listnum, pjid, this.cmdtype, calllist);
-					}else{//继续执行线程
-						
+						//开始计时，间隔为1s
+						this.interal_temp = this.interal;
+						this.isPause = true;
 					}
 				}
 			}
@@ -182,8 +276,14 @@ public class FswCtiServer {
 	}
 	
 	private static int CmdExeThreadsCount = 0;
-	private static CopyOnWriteArraySet<CmdExeThread> cmdExeThreads = new CopyOnWriteArraySet<CmdExeThread>();
+	public static CopyOnWriteArraySet<CmdExeThread> cmdExeThreads = new CopyOnWriteArraySet<CmdExeThread>();
 
+//	public static synchronized void AddThreads(CmdExeThread thread){
+//		cmdExeThreads.add(thread);
+//	}
+//	public static synchronized void RemoveThreads(CmdExeThread thread){
+//		cmdExeThreads.remove(thread);
+//	}
 	/**
      * 连接建立成功调用的方法
      * @param session  可选的参数。session为与某个客户端的连接会话，需要通过它来给客户端发送数据
@@ -286,7 +386,7 @@ public class FswCtiServer {
         //System.out.println("来自客户端的消息:" + message);
     		if(this.isServer){
     			//System.out.println(message);
-    			String msgtype = this.checkmsgheader(message,"MSGTYPE");
+    			String msgtype = checkmsgheader(message,"MSGTYPE");
     			//System.out.println(msgtype);
     			if("1".equals(msgtype)){//event群发
     				for(FswCtiServer item: webSocketSet){
@@ -329,41 +429,104 @@ public class FswCtiServer {
     			int msgclass = 1;
     			if(this.isAdmin==true){
     				try {
-        				msgclass = Integer.parseInt(this.checkmsgclass(message));
+        				msgclass = Integer.parseInt(checkmsgclass(message));
     				} catch (Exception e) {
     					// TODO: handle exception
     				}
-    				int rescode = 200;
-    				ArrayList<CtiClient> contents = new ArrayList<CtiClient>();
     				String pjid = "";
-    				String cmdtype = "";
+    				int cmdtype;
     				if(CTIEnum.CMD_ObCall == msgclass){//如果为有效执行命令，则开始执行相应任务，每个任务应采用子线程的方式执行；读取发送参数，从数据库中查询消息交由节点处理
-    					Agentsop op = new Agentsop();
-    					pjid = this.GetBodyItem(message,"pjid");
-    					cmdtype = this.GetBodyItem(message,"type");
+    					pjid = GetBodyItem(message,"pjid");
+    					try {
+    						cmdtype = Integer.parseInt(GetBodyItem(message,"type"));
+						} catch (NumberFormatException e) {
+							// TODO: handle exception
+							cmdtype = 0;
+						}
     					System.out.println(pjid);
     					System.out.println(cmdtype);
-//    					rescode = op.agentlogin(name, agentpwd, loginext, contents);
+    					if(cmdtype<1||cmdtype>7){//发送参数错误消息
+    						String resmsg = getresmsg(msgclass, CTIEnum.PBX_ISNOT_HAVE_THISFUN);
+    						for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
+	    						try {
+	        	                	if (session.isOpen()){//是否要全部发送？
+	        	                		if(item==this){
+	        	                			item.sendMessage(resmsg);
+	        	                		}
+	        	                	}
+	        	                } catch (IOException e) {
+	        	                    e.printStackTrace();
+	        	                }catch(NullPointerException e1){}
+	        	            }
+    					}else{
+    						//查询pjid的线程是否存在，若不存在，则new一个新的静态线程对象，否则对现有的线程进行关闭操作
+    						CmdExeThread thread = null;
+        					for(CmdExeThread item: cmdExeThreads){//向前端admin发送命令执行回馈消息
+        						try {
+        	                		if(item.getPjid().equals(pjid)){
+        	                			thread = item;
+        	                			break;
+            	                	}
+            	                }catch(NullPointerException e1){}
+            	            }
+        					if(thread!=null){
+        						if(cmdtype==2){//若是暂停命令，则终止线程
+        							thread.setEnd(true);
+        						}else{//项目必须要先暂停才能执行其它命令
+        							String resmsg = getresmsg(msgclass, CTIEnum.OBCALLPJ_ISALREADY_ON);
+        	        				for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
+        	    						try {
+        	        	                	if (session.isOpen()){//是否要全部发送？
+        	        	                		if(item==this){
+        	        	                			item.sendMessage(resmsg);
+        	        	                		}
+        	        	                	}
+        	        	                } catch (IOException e) {
+        	        	                    e.printStackTrace();
+        	        	                }catch(NullPointerException e1){}
+        	        	            }
+        						}
+        					}else{//线程不存在，若命令不是暂停，则new一个新静态线程
+        						if(cmdtype==2){//若是暂停命令，则提示错误
+        							String resmsg = getresmsg(msgclass, CTIEnum.OBCALLPJ_ISALREADY_PAUSE);
+        	        				for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
+        	    						try {
+        	        	                	if (session.isOpen()){//是否要全部发送？
+        	        	                		if(item==this){
+        	        	                			item.sendMessage(resmsg);
+        	        	                		}
+        	        	                	}
+        	        	                } catch (IOException e) {
+        	        	                    e.printStackTrace();
+        	        	                }catch(NullPointerException e1){}
+        	        	            }
+        						}else{//新建静态线程
+        							CmdExeThread obthread = new CmdExeThread(pjid,cmdtype);
+        							cmdExeThreads.add(obthread);
+        							addCmdExeThreadsCount();
+        							obthread.start();
+        						}
+        					}
+    					}
     				}else{//发送拒绝执行消息
-    					rescode = CTIEnum.PBX_ISNOT_HAVE_THISFUN;
+    					String resmsg = getresmsg(msgclass, CTIEnum.PBX_ISNOT_HAVE_THISFUN);
+        				for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
+    						try {
+        	                	if (session.isOpen()){//是否要全部发送？
+        	                		if(item==this){
+        	                			item.sendMessage(resmsg);
+        	                		}
+        	                	}
+        	                } catch (IOException e) {
+        	                    e.printStackTrace();
+        	                }catch(NullPointerException e1){}
+        	            }
     				}
-    				String resmsg = getresmsg(msgclass, rescode);
-    				for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
-						try {
-    	                	if (session.isOpen()){//是否要全部发送？
-    	                		if(item==this){
-    	                			item.sendMessage(resmsg);
-    	                		}
-    	                	}
-    	                } catch (IOException e) {
-    	                    e.printStackTrace();
-    	                }catch(NullPointerException e1){}
-    	            }
         		}else{
         			//首先判断是否已登录，如果未登录，则只接收登录命令，其它命令一律拒绝执行
         			if(this.client.getAgentid()==null||"".equals(this.client.getAgentid())){
         				try {
-            				msgclass = Integer.parseInt(this.checkmsgclass(message));
+            				msgclass = Integer.parseInt(checkmsgclass(message));
         				} catch (Exception e) {
         					// TODO: handle exception
         				}
@@ -373,9 +536,9 @@ public class FswCtiServer {
         				String loginext = "";
         				if(CTIEnum.CMD_Agentlogin == msgclass){
         					Agentsop op = new Agentsop();
-            				name = this.GetBodyItem(message,"agentid");
-        					String agentpwd = this.GetBodyItem(message,"agentpwd");
-        					loginext = this.GetBodyItem(message,"loginext");
+            				name = GetBodyItem(message,"agentid");
+        					String agentpwd = GetBodyItem(message,"agentpwd");
+        					loginext = GetBodyItem(message,"loginext");
         					name = "".equals(name)?this.client.getAgentid():name;
         					rescode = op.agentlogin(name, agentpwd, loginext, contents);
         				}else{//发送拒绝执行消息
@@ -409,7 +572,7 @@ public class FswCtiServer {
         					laststate = contents.get(0).getAgentlaststate();
         					if(!"".equals(laststate)){
         						isomit = true;
-        						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, this.getagentstate(laststate));
+        						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, getagentstate(laststate));
         					}
         				}
         				
@@ -428,7 +591,7 @@ public class FswCtiServer {
         				}
         			}else{
         				try {
-            				msgclass = Integer.parseInt(this.checkmsgclass(message));
+            				msgclass = Integer.parseInt(checkmsgclass(message));
         				} catch (Exception e) {
         					// TODO: handle exception
         				}
@@ -440,18 +603,18 @@ public class FswCtiServer {
             				String loginext = "";
             				String action = "";
             				if(CTIEnum.CMD_Agentlogin == msgclass){
-            					name = this.GetBodyItem(message,"agentid");
-            					String agentpwd = this.GetBodyItem(message,"agentpwd");
-            					loginext = this.GetBodyItem(message,"loginext");
+            					name = GetBodyItem(message,"agentid");
+            					String agentpwd = GetBodyItem(message,"agentpwd");
+            					loginext = GetBodyItem(message,"loginext");
             					name = "".equals(name)?this.client.getAgentid():name;
             					rescode = op.agentlogin(name, agentpwd, loginext, contents);
             				}else{
             					if(CTIEnum.CMD_Makebusy == msgclass){
-                					action = "0".equals(this.GetBodyItem(message,"ifbusy"))?CTIEnum.available:CTIEnum.onbreak;
-                					name = this.GetBodyItem(message,"deviceid");
+                					action = "0".equals(GetBodyItem(message,"ifbusy"))?CTIEnum.available:CTIEnum.onbreak;
+                					name = GetBodyItem(message,"deviceid");
                 				}else{
                 					action = CTIEnum.logout;
-                					name = this.GetBodyItem(message,"agentid");
+                					name = GetBodyItem(message,"agentid");
                 				}
             					name = "".equals(name)?this.client.getLoginext():name;//注意，是将坐席登录的分机登出
             					name = "".equals(name)?this.client.getAgentid():name;//如果登录分机为空，则认为登录分机和坐席id同名
@@ -499,16 +662,16 @@ public class FswCtiServer {
             					laststate = contents.get(0).getAgentlaststate();
             					if(!"".equals(laststate)){
             						isomit = true;
-            						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, this.getagentstate(laststate));
+            						e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_IDLE, getagentstate(laststate));
             					}
             				}else if(rescode == CTIEnum.AGENTLOGOFF_OK){
             					laststate = contents.get(0).getAgentlaststate();
             					isomit = true;
-            					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_NOLOGIN, this.getagentstate(laststate));
+            					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, CTIEnum.AGENT_NOLOGIN, getagentstate(laststate));
             				}else if(rescode == CTIEnum.AGENT_MAKEBUSY_OK){
             					laststate = contents.get(0).getAgentlaststate();
             					isomit = true;
-            					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, this.getagentstate(action), this.getagentstate(laststate));
+            					e_status = getscemsg(CTIEnum.EVENT_AgentStateChanged, "".equals(loginext)?name:loginext, getagentstate(action), getagentstate(laststate));
             				}
             				if(isomit){
                 				for(FswCtiServer item: webSocketSet){
@@ -546,7 +709,7 @@ public class FswCtiServer {
         	//确认cti登陆信息
         	if(this.isServer){
         		//System.out.println(message);
-        		if(checkservermsg(message,"login")){
+        		if(checkservermsg(message,"login",this.getServer())){
         			this.isConnected = true;
         		}
         	}else{
@@ -595,7 +758,7 @@ public class FswCtiServer {
         //this.session.getAsyncRemote().sendText(message);
     }
         
-	private boolean checkCliWSMsg(String message, String typemsg){
+    public static boolean checkCliWSMsg(String message, String typemsg){
 		boolean status = false;
 		String type, thisDN, request;
 		type = thisDN = request = "";
@@ -639,7 +802,7 @@ public class FswCtiServer {
 		return status;
     }
 	
-	private boolean checkservermsg(String message, String typemsg){
+	public static boolean checkservermsg(String message, String typemsg, CtiServer server){
 		boolean status = false;
 		String type, thisDN, request;
 		type = thisDN = request = "";
@@ -675,7 +838,7 @@ public class FswCtiServer {
 					return status;
 				}
 			}
-			this.server.setPbxid(thisDN);
+			server.setPbxid(thisDN);
 			status = true;
 			//this.client.setAgentid(thisDN);
 		} catch (Exception e) {
@@ -684,7 +847,7 @@ public class FswCtiServer {
 		return status;
 	}
 	
-	private String GetMsgPara(String src, String key, String s, String e, int sdelenum){
+	public static String GetMsgPara(String src, String key, String s, String e, int sdelenum){
 		String res = "";
         if("".equals(src))return "";
         int f1,f2,f3;
@@ -702,37 +865,78 @@ public class FswCtiServer {
         return res+"";
 	}
 
-	private String GetBodyItem(String src,String key)/* 获取key=val&中的val值 */
+	private static final String msgheadend="|";
+	private static final String msgheadsplit=":";
+	private static final String msgbodyend="&";
+	private static final String msgbodysplit="=";
+	private static final String msgend="@";
+	
+	public static String GetBodyItem(String src,String key)/* 获取key=val&中的val值 */
 	{
-		return GetMsgPara(src,key,"=","&",0);
+		return GetMsgPara(src,key,msgbodysplit,msgbodyend,0);
 	}
 	
-	private String checkmsgclass(String message){
+	public static String checkmsgclass(String message){
 		return GetBodyItem(message,"actionid");
 	}
 	
-	private String checkmsgheader(String message,String header){
-		return GetMsgPara(message,header,":","|",0);
+	public static String checkmsgheader(String message,String header){
+		return GetMsgPara(message,header,msgheadsplit,msgheadend,0);
 	}
 	
-	private String getresmsg(int msgclass, int rescode){
-		String resmsg = "MSGTYPE:3|MSG:"
-				+ msgclass + "|MSGBODY:actionid="
-				+ msgclass + "&imsg=&rescode="
-				+ rescode + "&pbxrescode=&res=&@";
+	public static String getresmsg(int msgclass, int rescode){
+		String resmsg = "MSGTYPE"+msgheadsplit+"3"+msgheadend+"MSG"+msgheadsplit+ msgclass + msgheadend
+				+"MSGBODY"+msgheadsplit
+				+"actionid"+msgbodysplit+ msgclass + msgbodyend
+				+"imsg"+msgbodysplit+ "" + msgbodyend
+				+"rescode"+msgbodysplit+ rescode + msgbodyend
+				+"pbxrescode"+msgbodysplit+ "" + msgbodyend
+				+"res"+msgbodysplit+ "" + msgbodyend
+				+msgend;
 		return resmsg;
 	}
 	
-	private String getscemsg(int msg, String agentid, int state, int laststate){
-		String resmsg = "MSGTYPE:1|MSG:"
-				+ msg + "|MSGBODY:agentid="
-				+ agentid + "&agentstate="
-				+ state + "&pbxid=&laststate="
-				+ laststate + "&floatdata=&@";
+	public static String getscemsg(int msg, String agentid, int state, int laststate){
+		String resmsg = "MSGTYPE"+msgheadsplit+"1"+msgheadend+"MSG"+msgheadsplit+ msg + msgheadend
+				+"MSGBODY"+msgheadsplit
+				+"agentid"+msgbodysplit+ agentid + msgbodyend
+				+"agentstate"+msgbodysplit+ state + msgbodyend
+				+"pbxid"+msgbodysplit+ "" + msgbodyend
+				+"laststate"+msgbodysplit+ laststate + msgbodyend
+				+"floatdata"+msgbodysplit+ "" + msgbodyend
+				+msgend;
 		return resmsg;
 	}
 	
-	private int getagentstate(String state){
+	public static String SetHeader(int msgtype,String msg,int actionid,String agentid){/* MSGTYPE:msgtype|MSG:msg|MSGBODY:actionid=&userid=& */
+		String msghead="MSGTYPE"+msgheadsplit+msgtype;
+		msghead+=msgheadend;
+		msghead+="MSG"+msgheadsplit+msg;
+		msghead+=msgheadend;
+		msghead+="MSGBODY"+msgheadsplit;
+		msghead+="actionid";
+		msghead+=msgbodysplit;
+		msghead+=actionid;
+		msghead+=msgbodyend;
+		//add by hunk
+		msghead+="userid";
+		msghead+=msgbodysplit;
+		msghead+=agentid;
+		msghead+=msgbodyend;
+		
+		return msghead;
+	}
+	
+	public static String SetBody(String key,String value){/* key=value&*/
+		String msgbodyitem=key;
+		msgbodyitem+=msgbodysplit;
+		msgbodyitem+=value;
+		msgbodyitem+=msgbodyend;
+
+		return msgbodyitem;
+	}
+	
+	private static int getagentstate(String state){
 		int st = 0;
 		switch (state) {
 		case "Logged Out":

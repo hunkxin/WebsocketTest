@@ -45,7 +45,7 @@ public class DoObbase<T>{
 		return errormsg;
 	}
 	
-	public String updatedb(String sql){
+	public String updatedb(ArrayList<String> sqls){
 		String errormsg = "";
 		Connection con;
 		try {
@@ -55,20 +55,38 @@ public class DoObbase<T>{
 			errormsg += UT.errormsg(e1);
 			return errormsg;
 		}
-		Statement stmt = null;
+		Statement stmt = null;		
 		try {
+			con.setAutoCommit(false);
 			stmt = con.createStatement();
-			stmt.executeUpdate(sql);		
+			for(int i=0;i < (sqls.size()); i++){
+				stmt.addBatch(sqls.get(i));
+				//System.out.println(sqlcmd);
+			}
+			stmt.executeBatch();
+			con.commit();
 		} catch (SQLException e) {
+			try {
+				con.rollback();
+			} catch (SQLException e1) {
+				// TODO Auto-generated catch block
+				errormsg += UT.errormsg(e1);
+			}
 			//e.printStackTrace();
 			errormsg += UT.errormsg(e);
 		}finally{
+			try {
+				con.setAutoCommit(true);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				errormsg += UT.errormsg(e);
+			}
 			errormsg = errormsg + (UT.sfcloseDb(stmt) + UT.sfcloseDb(con));
 		}
 		return errormsg;
 	}
 	
-	public String deletedb(String sql,String[] ids){
+	public String deletedb(String sql,String[] ids,ArrayList<String> sqls){
 		String errormsg = "";
 		Connection con;
 		try {
@@ -86,6 +104,11 @@ public class DoObbase<T>{
 				String sqlcmd = sql+ids[i];
 				stmt.addBatch(sqlcmd);
 				//System.out.println(sqlcmd);
+			}
+			if(sqls!=null){
+				for(int i=0;i < sqls.size(); i++){
+					stmt.addBatch(sqls.get(i));
+				}
 			}
 			stmt.executeBatch();
 			con.commit();

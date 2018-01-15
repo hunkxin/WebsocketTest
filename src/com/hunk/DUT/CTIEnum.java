@@ -74,6 +74,7 @@ public class CTIEnum {
 	public static final int OBCALLPJ_ISALREADY_PAUSE = 46;//外呼项目未运行
 	public static final int OBCALLPJ_ISALREADY_END = 47;//外呼项目已完成所有呼叫
 	public static final int OBCALLPJ_ISNOT_EXIST = 48;//外呼项目不存在
+	public static final int OBCALLPJ_NOIDLE_AGENT = 49;//外呼坐席全忙
 	public static final int PBXOBJISNULL = 100;//PBX对象无效
 	public static final int PBXINNERERR = 200;//PBX内部错误
 	
