@@ -21,6 +21,7 @@ import com.hunk.DUT.UT;
 import com.hunk.bean.CallList;
 import com.hunk.bean.CtiClient;
 import com.hunk.bean.CtiServer;
+import com.hunk.bean.Pjjobbase;
 import com.hunk.bean.Projectbase;
  
 //该注解用来指定一个URI，客户端可以通过这个URI来连接到WebSocket。类似Servlet的注解mapping。无需在web.xml中配置。
@@ -78,12 +79,14 @@ public class FswCtiServer {
 		private boolean isPause;
 		private boolean isEnd;
 		private String pjid;
+		private String pjjobid;
 		private int cmdtype;
 		private Projectbase pjbase;
 		private int interal;
 		private int interal_temp;
-		private long lastautoid;
 		private CallList lastnum;
+		private long executed;
+		private Projectmngop op;
 //		private long starttime;
 //		private long pausetime;
 //		public boolean isPause() {
@@ -104,6 +107,8 @@ public class FswCtiServer {
 			this.isEnd = false;
 			this.pjid = pjid;
 			this.cmdtype = cmdtype;
+			this.executed = 0;
+			this.op = new Projectmngop();
 		}
 		@Override
 		public void run() {
@@ -113,7 +118,8 @@ public class FswCtiServer {
 					cmdExeThreads.remove(this);
 					subCmdExeThreadsCount();
 					//将结束的信息记录到数据库中（保存在最后一条pjid的任务记录中），只记录暂停时间
-					new Projectmngop().Updatepauseinfo(this.pjid, this.lastnum);
+					if(this.pjbase!=null)//如果pjid不存在，则不更新数据库
+						op.UpdatePauseinfo(this.pjid, this.lastnum);
 					break;
 				}
 				if(isPause){
@@ -129,8 +135,23 @@ public class FswCtiServer {
 					ArrayList<CallList> calllist = new ArrayList<CallList>();
 					ArrayList<String> ALagentcount = new ArrayList<String>();
 					int listnum = 1;
-					Projectmngop op = new Projectmngop();
+					//Projectmngop op = new Projectmngop();
 					if(this.pjbase == null){//为空说明是重新开始的线程，需要获取项目相关配置信息
+						//如果cmdtype为OBCMDTYPE_START则还要查询数据库查找lastnum
+						if(this.cmdtype==CTIEnum.OBCMDTYPE_START){
+							ArrayList<Pjjobbase> pjjcontents = new ArrayList<Pjjobbase>();
+							rescode = op.GetLastpjjob(pjid, pjjcontents);
+							//如果pjjcontents.size()<0则认为本次操作为OBCMDTYPE_RESTART
+							if(rescode!=0){
+								this.cmdtype = CTIEnum.OBCMDTYPE_RESTART;
+							}else{
+								this.lastnum = new CallList(pjjcontents.get(0).getLastnumid(), 
+										"", 
+										"", 
+										"0");
+								this.pjjobid = pjjcontents.get(0).getAutoid();
+							}
+						}
 						ArrayList<Projectbase> pjcontents = new ArrayList<Projectbase>();
 						rescode = op.GetProfile(pjid, cmdtype, pjcontents);
 						if(rescode!=0){//发送错误消息
@@ -144,10 +165,30 @@ public class FswCtiServer {
             	                    e.printStackTrace();
             	                }catch(NullPointerException e1){}
             	            }
-							this.isEnd = true;
+							this.isEnd = true;//
 							continue;
 						}
 						this.pjbase = pjcontents.get(0);
+						if(this.pjjobid==null){//获取任务id值，以传给子节点作为cdr参数使用
+							ArrayList<Pjjobbase> pjjcontents = new ArrayList<Pjjobbase>();
+							rescode = op.GetLastpjjob(pjid, pjjcontents);
+							if(rescode!=0){//发送错误消息
+								String message = getresmsg(CTIEnum.CMD_ObCall, rescode);
+								for(FswCtiServer item: webSocketSet_a){//
+	            	                try {
+	        	                		if(!UT.zstr(item.getClient().getAgentid())){
+	    	                				item.sendMessage(message);
+	        	                		}
+	            	                } catch (IOException e) {
+	            	                    e.printStackTrace();
+	            	                }catch(NullPointerException e1){}
+	            	            }
+								this.isEnd = true;//
+								continue;
+							}else{
+								this.pjjobid = pjjcontents.get(0).getAutoid();
+							}
+						}
 						try {
 							this.interal = Integer.parseInt(pjbase.getCallinterval());
 							if(this.interal<4) this.interal = 4;
@@ -171,20 +212,20 @@ public class FswCtiServer {
 //							
 //						}else//
 //							break;
-						
 					}
 					rescode = op.GetAgentCount(this.pjbase.getQueueno(), ALagentcount);
 					if(rescode==0){//根据空闲坐席数和呼叫系数得到这次要发送的号码清单
 						try {
 							listnum = (Integer.parseInt(ALagentcount.get(0)))*(Integer.parseInt(this.pjbase.getConcurrencyrate()))/100;
+							System.out.println("listnum:"+listnum);
 						} catch (NumberFormatException e) {
 							// TODO: handle exception
 							listnum = 1;
 						}
 					}
-					if(listnum<1) listnum = 1;
-					rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, this.lastnum.getAutoid(), calllist);//这里要保证接着上一次的记录继续查找
-					if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END&&"0".equals(this.lastnum.getRetry())){//这里需要判断号码是否已经全部执行完，若只是执行完一轮，retry不为0，则从头开始继续执行，否则结束该线程
+					if(listnum<1) listnum = 1;//这里必须要至少选择一个，即便空闲坐席为0也宁可浪费，否则会出现线程不会停止的状况
+					rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, this.lastnum==null?"0":this.lastnum.getAutoid(), calllist);//这里要保证接着上一次的记录继续查找
+					if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END&&"0".equals(this.lastnum==null?"0":this.lastnum.getRetry())){//这里需要判断号码是否已经全部执行完，若只是执行完一轮，retry不为0，则从头开始继续执行，否则结束该线程
 						//号码全部执行完，结束该线程，发送消息给前端
 						String message = getresmsg(CTIEnum.CMD_ObCall, rescode);
 						for(FswCtiServer item: webSocketSet_a){//
@@ -197,8 +238,9 @@ public class FswCtiServer {
         	                }catch(NullPointerException e1){}
         	            }
 						//保存任务结束信息
-						
+						op.UpdateEndinfo(pjid);
 						this.isEnd = true;
+						//continue;
 					}else{
 						if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END){//只是执行完一轮，retry不为0，则从头开始继续执行
 							rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, "0", calllist);
@@ -208,6 +250,7 @@ public class FswCtiServer {
 							String message = FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "");
 							
 							message+=FswCtiServer.SetBody("pjid",this.pjid);
+							message+=FswCtiServer.SetBody("pjjobid",this.pjjobid);
 							
 							int list_num = calllist.size();
 							int svr_count = FswCtiServer.getOnlineSvrCount();
@@ -259,12 +302,35 @@ public class FswCtiServer {
 									temp = 0;
 								}
 								if(temp<0) temp=0;
-								this.lastnum = new CallList(calllist.get(list_num-1).getAutoid(), 
-										calllist.get(list_num-1).getTelnum(), 
-										calllist.get(list_num-1).getTrycount(), 
-										String.valueOf(temp));
+								if(this.lastnum ==null){
+									this.lastnum = new CallList(calllist.get(list_num-1).getAutoid(), 
+											calllist.get(list_num-1).getTelnum(), 
+											calllist.get(list_num-1).getTrycount(), 
+											String.valueOf(temp));
+								}else{
+									this.lastnum.setAutoid(calllist.get(list_num-1).getAutoid());
+									this.lastnum.setTelnum(calllist.get(list_num-1).getTelnum());;
+									this.lastnum.setTrycount(calllist.get(list_num-1).getTrycount());
+									this.lastnum.setRetry(String.valueOf(temp));
+								}
 								rescode = op.UpdateCallList(calllist);
+								this.executed += list_num;
+								//保存已执行的号码数，统一由cti调度
+								op.UpdateExeinfo(pjid, list_num);
 							}
+						}else{//没有可用的节点服务器，终止线程，并发送错误消息
+							String message = getresmsg(CTIEnum.CMD_ObCall, CTIEnum.PBXOBJISNULL);
+							for(FswCtiServer item: webSocketSet_a){//
+	        	                try {
+	    	                		if(!UT.zstr(item.getClient().getAgentid())){
+		                				item.sendMessage(message);
+	    	                		}
+	        	                } catch (IOException e) {
+	        	                    e.printStackTrace();
+	        	                }catch(NullPointerException e1){}
+	        	            }
+							this.isEnd = true;
+							continue;
 						}
 						//开始计时，间隔为1s
 						this.interal_temp = this.interal;

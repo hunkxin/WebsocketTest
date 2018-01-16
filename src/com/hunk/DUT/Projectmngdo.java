@@ -1,11 +1,8 @@
 package com.hunk.DUT;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
-import com.hunk.DAO.JDBCMysql;
 import com.hunk.bean.Projectbase;
 
 public class Projectmngdo extends DoObbase<Projectbase>{
@@ -13,6 +10,12 @@ public class Projectmngdo extends DoObbase<Projectbase>{
 	public String rowselsql(String autoid) {
 		String sqlcmd;
 		sqlcmd = "select * from `fs_ob_pj` where `autoid`="+autoid;
+		return sqlcmd;
+	}
+	
+	public String lastnumselsql(String autoid) {
+		String sqlcmd;
+		sqlcmd = "select `lastnumid` from `fs_ob_pjjob` where `autoid`= (select MAX(`autoid`) from `fs_ob_pjjob` where `pjid` = "+autoid+")";
 		return sqlcmd;
 	}
 		
@@ -75,44 +78,4 @@ public class Projectmngdo extends DoObbase<Projectbase>{
 		sqlcmd += sqlcdt;
 		return sqlcmd;
 	}
-		
-	public String updatedb(ArrayList<String> sqls){
-		String errormsg = "";
-		Connection con;
-		try {
-			con = new JDBCMysql().getconnect();
-		} catch (SQLException e1) {
-			//e1.printStackTrace();
-			errormsg += UT.errormsg(e1);
-			return errormsg;
-		}
-		Statement stmt = null;
-		try {
-			con.setAutoCommit(false);
-			stmt = con.createStatement();
-			for(String sql:sqls){
-				stmt.addBatch(sql);
-			}
-			stmt.executeBatch();
-			con.commit();
-		} catch (SQLException e) {
-			try {
-				con.rollback();
-			} catch (SQLException e1) {
-				// TODO Auto-generated catch block
-				errormsg += UT.errormsg(e1);
-			}
-			//e.printStackTrace();
-			errormsg += UT.errormsg(e);
-		}finally{
-			try {
-				con.setAutoCommit(true);
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				errormsg += UT.errormsg(e);
-			}
-			errormsg = errormsg + (UT.sfcloseDb(stmt) + UT.sfcloseDb(con));
-		}
-		return errormsg;
-	}	
 }

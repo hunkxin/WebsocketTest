@@ -3,6 +3,7 @@ package com.hunk.DUT;
 import java.util.ArrayList;
 
 import com.hunk.bean.CallList;
+import com.hunk.bean.Pjjobbase;
 import com.hunk.bean.Projectbase;
 
 public class Projectmngop extends DoObbase<Projectbase>{
@@ -37,6 +38,24 @@ public class Projectmngop extends DoObbase<Projectbase>{
 				System.out.println("GetProfile"+":"+resmsg);
 				rescode = CTIEnum.PBXINNERERR;
 			}
+		}
+		return rescode;
+	}
+	
+	public int GetLastpjjob(String pjid, ArrayList<Pjjobbase> contents){
+		String resmsg = "";
+		int rescode = 0;
+		if(pjid==null||"".equals(pjid)){
+			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
+		}
+		Pjjobmngdo pjjop = new Pjjobmngdo();
+		resmsg += pjjop.selectdb(contents,pjjop.lastrowselsql(pjid),"");
+		//System.out.println("1:"+resmsg);
+		if(resmsg.equals("")&&contents.size()>0){
+			
+		}else{
+			System.out.println("GetLastnum"+":"+resmsg);
+			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
 	}
@@ -99,14 +118,50 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		return rescode;
 	}
 	
-	public int Updatepauseinfo(String pjid, CallList lastnum){
+	public int UpdatePauseinfo(String pjid, CallList lastnum){
 		String resmsg = "";
 		int rescode = 0;
 		if(pjid==null||"".equals(pjid)){
 			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
 		}
-		CallListmngdo clop = new CallListmngdo();
-		resmsg += clop.updatedb(clop.getpauseupdatesql(pjid, lastnum==null?"0":lastnum.getAutoid()));
+		Pjjobmngdo pjjop = new Pjjobmngdo();
+		resmsg += pjjop.updatedb(pjjop.getpauseupdatesql(pjid, lastnum==null?"0":lastnum.getAutoid()));
+		//System.out.println("21:"+resmsg);
+		if(resmsg.equals("")){
+			
+		}else{
+			System.out.println("Updatepauseinfo"+":"+resmsg);
+			rescode = CTIEnum.PBXINNERERR;
+		}
+		return rescode;
+	}
+	
+	public int UpdateEndinfo(String pjid){
+		String resmsg = "";
+		int rescode = 0;
+		if(pjid==null||"".equals(pjid)){
+			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
+		}
+		Pjjobmngdo pjjop = new Pjjobmngdo();
+		resmsg += pjjop.updatedb(pjjop.getendupdatesql(pjid));
+		//System.out.println("21:"+resmsg);
+		if(resmsg.equals("")){
+			
+		}else{
+			System.out.println("Updatepauseinfo"+":"+resmsg);
+			rescode = CTIEnum.PBXINNERERR;
+		}
+		return rescode;
+	}
+	
+	public int UpdateExeinfo(String pjid, long executed){
+		String resmsg = "";
+		int rescode = 0;
+		if(pjid==null||"".equals(pjid)){
+			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
+		}
+		Pjjobmngdo pjjop = new Pjjobmngdo();
+		resmsg += pjjop.updatedb(pjjop.getexeupdatesql(pjid, executed));
 		//System.out.println("21:"+resmsg);
 		if(resmsg.equals("")){
 			
