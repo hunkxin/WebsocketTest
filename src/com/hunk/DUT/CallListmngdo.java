@@ -120,7 +120,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+"'"+content.getAutoid()+"',"
 			+"'"+cmdtype+"',"
 			//+"'"+content.getCallpool()+"',"
-			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist` where `pjid` = "+content.getPjid()+" and `retry` = "+content.getCall_retry()+"),"
+			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist` where `pjid` = "+content.getAutoid()+" and `retry` = "+content.getCall_retry()+"),"
 			//+"'"+content.getExecuted()+"',"
 			//+"'"+content.getLastnumid()+"',"
 			+"'"+(new Date()).getTime()/1000+"'"
@@ -129,7 +129,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+")";
 			sqls.add(sqlcmd);
 			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getPjid()+" and not `retry` = "+content.getCall_retry();
+					+" where `pjid` = "+content.getAutoid()+" and not `retry` = "+content.getCall_retry();
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_CUS_FAILED:
@@ -164,7 +164,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getPjid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 0 and `isbridge` = 0)";
+					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 0 and `isbridge` = 0)";
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_AGT_FAILED:
@@ -199,7 +199,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getPjid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 0)";
+					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 0)";
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_CUS_SUCCESS:
@@ -234,7 +234,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getPjid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 1)";
+					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 1)";
 			sqls.add(sqlcmd);
 			break;
 		default:

@@ -54,7 +54,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		if(resmsg.equals("")&&contents.size()>0){
 			
 		}else{
-			System.out.println("GetLastnum"+":"+resmsg);
+			System.out.println("GetLastpjjob"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;

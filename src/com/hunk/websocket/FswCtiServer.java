@@ -247,10 +247,23 @@ public class FswCtiServer {
 						}
 						if(rescode==0){//发送命令到子节点
 							//拼装命令字符串，随机分发给子节点
-							String message = FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "");
+							String message = FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "obc");//注意agentid不能为空
 							
 							message+=FswCtiServer.SetBody("pjid",this.pjid);
 							message+=FswCtiServer.SetBody("pjjobid",this.pjjobid);
+							message+=FswCtiServer.SetBody("trunkid",this.pjbase.getTrunkid());
+							message+=FswCtiServer.SetBody("ifrd",this.pjbase.getIfrecord());
+							message+=FswCtiServer.SetBody("rbid",this.pjbase.getRingbackid());
+							message+=FswCtiServer.SetBody("overtm",this.pjbase.getCall_overtime());
+							String obtype = this.pjbase.getObtype();
+							message+=FswCtiServer.SetBody("obtype",obtype);
+							if("0".equals(obtype)){
+								message+=FswCtiServer.SetBody("fdata",this.pjbase.getQueueno());
+							}else if("1".equals(obtype)){
+								message+=FswCtiServer.SetBody("fdata",this.pjbase.getIvrid());
+							}else{
+								message+=FswCtiServer.SetBody("fdata",this.pjbase.getExtid());
+							}
 							
 							int list_num = calllist.size();
 							int svr_count = FswCtiServer.getOnlineSvrCount();
@@ -317,20 +330,20 @@ public class FswCtiServer {
 								this.executed += list_num;
 								//保存已执行的号码数，统一由cti调度
 								op.UpdateExeinfo(pjid, list_num);
+							}else{//没有可用的节点服务器，终止线程，并发送错误消息
+								message = getresmsg(CTIEnum.CMD_ObCall, CTIEnum.PBXOBJISNULL);
+								for(FswCtiServer item: webSocketSet_a){//
+		        	                try {
+		    	                		if(!UT.zstr(item.getClient().getAgentid())){
+			                				item.sendMessage(message);
+		    	                		}
+		        	                } catch (IOException e) {
+		        	                    e.printStackTrace();
+		        	                }catch(NullPointerException e1){}
+		        	            }
+								this.isEnd = true;
+								continue;
 							}
-						}else{//没有可用的节点服务器，终止线程，并发送错误消息
-							String message = getresmsg(CTIEnum.CMD_ObCall, CTIEnum.PBXOBJISNULL);
-							for(FswCtiServer item: webSocketSet_a){//
-	        	                try {
-	    	                		if(!UT.zstr(item.getClient().getAgentid())){
-		                				item.sendMessage(message);
-	    	                		}
-	        	                } catch (IOException e) {
-	        	                    e.printStackTrace();
-	        	                }catch(NullPointerException e1){}
-	        	            }
-							this.isEnd = true;
-							continue;
 						}
 						//开始计时，间隔为1s
 						this.interal_temp = this.interal;
