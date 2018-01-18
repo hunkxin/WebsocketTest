@@ -13,21 +13,11 @@ public class CallListmngdo extends DoObbase<CallList>{
 	public String rowsselsql(String autoid, String retry, int CmdType, int listnum, String lastnumid) {
 		String sqlcdt = "";
 		String sqlcmd = "";
-		switch (CmdType) {
-		case CTIEnum.OBCMDTYPE_RESTART:
-			sqlcmd = "select * from `fs_ob_pjnumlist` where `pjid`="+autoid
-					+" and `isinjob` = 1"
-					+" and `retry` = "+retry
-					+" order by `autoid`";
-			break;
-		default:
-			sqlcmd = "select * from `fs_ob_pjnumlist` where `pjid`="+autoid
-			+" and `isinjob` = 1"
-			+" and `retry` > 0"
-			+" and `autoid` > "+lastnumid
-			+" order by `autoid`";
-			break;
-		}
+		sqlcmd = "select * from `fs_ob_pjnumlist` where `pjid`="+autoid
+		+" and `isinjob` = 1"
+		+" and `retry` > 0"
+		+" and `autoid` > "+lastnumid
+		+" order by `autoid`";
 		sqlcmd += sqlcdt;
 		sqlcmd += " limit "+listnum;
 		System.out.println(sqlcmd);

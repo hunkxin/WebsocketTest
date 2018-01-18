@@ -51,8 +51,12 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		Pjjobmngdo pjjop = new Pjjobmngdo();
 		resmsg += pjjop.selectdb(contents,pjjop.lastrowselsql(pjid),"");
 		//System.out.println("1:"+resmsg);
-		if(resmsg.equals("")&&contents.size()>0){
-			
+		if(resmsg.equals("")){
+			if(contents.size()>0){
+				
+			}else{
+				rescode = CTIEnum.OBCALLPJ_ISALREADY_END;
+			}
 		}else{
 			System.out.println("GetLastpjjob"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
@@ -118,14 +122,14 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		return rescode;
 	}
 	
-	public int UpdatePauseinfo(String pjid, CallList lastnum){
+	public int UpdatePauseinfo(String pjjobid, CallList lastnum){
 		String resmsg = "";
 		int rescode = 0;
-		if(pjid==null||"".equals(pjid)){
+		if(pjjobid==null||"".equals(pjjobid)){
 			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
 		}
 		Pjjobmngdo pjjop = new Pjjobmngdo();
-		resmsg += pjjop.updatedb(pjjop.getpauseupdatesql(pjid, lastnum==null?"0":lastnum.getAutoid()));
+		resmsg += pjjop.updatedb(pjjop.getpauseupdatesql(pjjobid, lastnum==null?"0":lastnum.getAutoid()));
 		//System.out.println("21:"+resmsg);
 		if(resmsg.equals("")){
 			
@@ -136,14 +140,14 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		return rescode;
 	}
 	
-	public int UpdateEndinfo(String pjid){
+	public int UpdateEndinfo(String pjjobid){
 		String resmsg = "";
 		int rescode = 0;
-		if(pjid==null||"".equals(pjid)){
+		if(pjjobid==null||"".equals(pjjobid)){
 			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
 		}
 		Pjjobmngdo pjjop = new Pjjobmngdo();
-		resmsg += pjjop.updatedb(pjjop.getendupdatesql(pjid));
+		resmsg += pjjop.updatedb(pjjop.getendupdatesql(pjjobid));
 		//System.out.println("21:"+resmsg);
 		if(resmsg.equals("")){
 			
@@ -154,14 +158,14 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		return rescode;
 	}
 	
-	public int UpdateExeinfo(String pjid, long executed){
+	public int UpdateExeinfo(String pjjobid, long executed){
 		String resmsg = "";
 		int rescode = 0;
-		if(pjid==null||"".equals(pjid)){
+		if(pjjobid==null||"".equals(pjjobid)){
 			return CTIEnum.OBCALLPJ_ISNOT_EXIST;
 		}
 		Pjjobmngdo pjjop = new Pjjobmngdo();
-		resmsg += pjjop.updatedb(pjjop.getexeupdatesql(pjid, executed));
+		resmsg += pjjop.updatedb(pjjop.getexeupdatesql(pjjobid, executed));
 		//System.out.println("21:"+resmsg);
 		if(resmsg.equals("")){
 			

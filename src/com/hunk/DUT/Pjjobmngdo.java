@@ -45,7 +45,8 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		ArrayList<String> sqls = new ArrayList<>();
 		String sqlcmd = "update `fs_ob_pjjob` set "
 				+"`endtime` = '"+(new Date()).getTime()/1000+"'";
-		String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		//String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
 		System.out.println(sqlcmd);
@@ -57,7 +58,8 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		String sqlcmd = "update `fs_ob_pjjob` set "
 						+"`lastnumid` = '"+lastnumid+"',"
 						+"`lastpausetime` = '"+(new Date()).getTime()/1000+"'";
-		String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		//String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
 		System.out.println(sqlcmd);
@@ -68,7 +70,8 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		ArrayList<String> sqls = new ArrayList<>();
 		String sqlcmd = "update `fs_ob_pjjob` set "
 						+"`executed` = (`executed`+"+executed+")";
-		String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		//String sqlcdt = " where `autoid` = (select a.autoid from (select MAX(`autoid`)  as `autoid` from `fs_ob_pjjob` where `pjid` = "+cdt+") as a)";
+		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
 		System.out.println(sqlcmd);

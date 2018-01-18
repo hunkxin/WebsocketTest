@@ -118,8 +118,8 @@ public class FswCtiServer {
 					cmdExeThreads.remove(this);
 					subCmdExeThreadsCount();
 					//将结束的信息记录到数据库中（保存在最后一条pjid的任务记录中），只记录暂停时间
-					if(this.pjbase!=null)//如果pjid不存在，则不更新数据库
-						op.UpdatePauseinfo(this.pjid, this.lastnum);
+					if(this.pjbase!=null&&this.pjjobid!=null)//如果pjid或者pjjobid不存在，则不更新数据库
+						op.UpdatePauseinfo(this.pjjobid, this.lastnum);
 					break;
 				}
 				if(isPause){
@@ -238,7 +238,7 @@ public class FswCtiServer {
         	                }catch(NullPointerException e1){}
         	            }
 						//保存任务结束信息
-						op.UpdateEndinfo(pjid);
+						op.UpdateEndinfo(pjjobid);
 						this.isEnd = true;
 						//continue;
 					}else{
@@ -247,7 +247,8 @@ public class FswCtiServer {
 						}
 						if(rescode==0){//发送命令到子节点
 							//拼装命令字符串，随机分发给子节点
-							String message = FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "obc");//注意agentid不能为空
+							String message = "\"";//注意ctilink接受的有效信息格式必须收尾要有引号
+							message+=FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "obc");//注意agentid不能为空
 							
 							message+=FswCtiServer.SetBody("pjid",this.pjid);
 							message+=FswCtiServer.SetBody("pjjobid",this.pjjobid);
@@ -277,6 +278,7 @@ public class FswCtiServer {
 	        	                			for(int i=0;i<dispc_count;i++){
 	        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*dispc_count+i).getTelnum());
 	        	                				message+=FswCtiServer.msgend;
+	        	                				message+="\"";
 	        	                				item.sendMessage(message);
 	        	                			}
 	        	                		}
@@ -297,6 +299,7 @@ public class FswCtiServer {
 		        	                			for(int i=0;i<list_num%svr_count;i++){
 		        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*svr_count+i).getTelnum());
 		        	                				message+=FswCtiServer.msgend;
+		        	                				message+="\"";
 		        	                				item.sendMessage(message);
 		        	                			}
 		        	                			break;
@@ -329,7 +332,7 @@ public class FswCtiServer {
 								rescode = op.UpdateCallList(calllist);
 								this.executed += list_num;
 								//保存已执行的号码数，统一由cti调度
-								op.UpdateExeinfo(pjid, list_num);
+								op.UpdateExeinfo(pjjobid, list_num);
 							}else{//没有可用的节点服务器，终止线程，并发送错误消息
 								message = getresmsg(CTIEnum.CMD_ObCall, CTIEnum.PBXOBJISNULL);
 								for(FswCtiServer item: webSocketSet_a){//
