@@ -251,6 +251,7 @@ public class FswCtiServer {
 							message+=FswCtiServer.SetHeader(CTIEnum.CMD, String.valueOf(CTIEnum.CMD_ObCall), CTIEnum.CMD_ObCall, "obc");//注意agentid不能为空
 							
 							message+=FswCtiServer.SetBody("pjid",this.pjid);
+							message+=FswCtiServer.SetBody("pjclassid",this.pjbase.getPjclassid());
 							message+=FswCtiServer.SetBody("pjjobid",this.pjjobid);
 							message+=FswCtiServer.SetBody("trunkid",this.pjbase.getTrunkid());
 							message+=FswCtiServer.SetBody("ifrd",this.pjbase.getIfrecord());
