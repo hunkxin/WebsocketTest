@@ -12,6 +12,7 @@ public class CtiClient {
 	private String agentstate;
 	private String agentlaststate;
 	private int ifrevcallin;
+	private String laststatuschange;
 	public int getExist() {
 		return exist;
 	}
@@ -78,6 +79,12 @@ public class CtiClient {
 	public void setIfrevcallin(int ifrevcallin) {
 		this.ifrevcallin = ifrevcallin;
 	}
+	public String getLaststatuschange() {
+		return laststatuschange;
+	}
+	public void setLaststatuschange(String laststatuschange) {
+		this.laststatuschange = laststatuschange;
+	}
 	public CtiClient(int exist, String guid, String agentid, String agentmd5pwd, String loginext, String agentrole,
 			String agentext, int agentlevel, String agentstate, String agentlaststate, int ifrevcallin) {
 		super();
@@ -93,11 +100,12 @@ public class CtiClient {
 		this.agentlaststate = agentlaststate;
 		this.ifrevcallin = ifrevcallin;
 	}
-	public CtiClient(int exist, String loginext, String agentstate) {
+	public CtiClient(int exist, String loginext, String agentstate, String laststatuschange) {
 		super();
 		this.exist = exist;
 		this.loginext = loginext;
 		this.agentstate = agentstate;
+		this.laststatuschange = laststatuschange;
 	}
 	public CtiClient(){
 		super();

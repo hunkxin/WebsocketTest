@@ -11,6 +11,7 @@ public class Projectbase {
 	private String concurrencyrate;
 	private String callinterval;
 	private String obtype;
+	private String dfcallrate;
 	private String queueno;
 	private String ivrid;
 	private String extid;
@@ -96,6 +97,12 @@ public class Projectbase {
 	}
 	public void setObtype(String obtype) {
 		this.obtype = obtype;
+	}
+	public String getDfcallrate() {
+		return dfcallrate;
+	}
+	public void setDfcallrate(String dfcallrate) {
+		this.dfcallrate = dfcallrate;
 	}
 	public String getQueueno() {
 		return queueno;
@@ -255,8 +262,8 @@ public class Projectbase {
 	}
 	public Projectbase(String autoid, String pjid, String pjclassid, String pjname, String trunkid,
 			String caller_id_number, String ifrecord, String concurrencyrate, String callinterval, String obtype,
-			String queueno, String ivrid, String extid, String ringbackid, String pn_imptime, String callpool,
-			String telbookpath, String blacklist, String iffilter, String starttime, String pausetime,
+			String dfcallrate, String queueno, String ivrid, String extid, String ringbackid, String pn_imptime,
+			String callpool, String telbookpath, String blacklist, String iffilter, String starttime, String pausetime,
 			String lastpn_imptime, String lastcallpool, String laststarttime, String lastpausetime, String lastcpremain,
 			String exestate, String call_overtime, String call_retry, String creator, String lastmodifyer,
 			String creatortime, String modifytime, String iflock, String owner, String pbxid) {
@@ -271,6 +278,7 @@ public class Projectbase {
 		this.concurrencyrate = concurrencyrate;
 		this.callinterval = callinterval;
 		this.obtype = obtype;
+		this.dfcallrate = dfcallrate;
 		this.queueno = queueno;
 		this.ivrid = ivrid;
 		this.extid = extid;
@@ -310,6 +318,7 @@ public class Projectbase {
 		this.concurrencyrate = "";
 		this.callinterval = "";
 		this.obtype = "";
+		this.dfcallrate = "";
 		this.queueno = "";
 		this.ivrid = "";
 		this.extid = "";

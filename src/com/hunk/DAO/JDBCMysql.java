@@ -39,11 +39,11 @@ public class JDBCMysql {
 	
 		if(issofia){
 			con = DriverManager.getConnection(
-		   			"jdbc:mysql://"+dbip+":3306/sofia_reg_internal?" +
+		   			"jdbc:mysql://"+dbip+":3306/sofia_reg_internal?useSSL=false&" +
                     "user=freeswitch&password=freeswitch");
 		}else if(iscc){
 			con = DriverManager.getConnection(
-		   			"jdbc:mysql://"+dbip+":3306/callcenter?" +
+		   			"jdbc:mysql://"+dbip+":3306/callcenter?useSSL=false&" +
                     "user=freeswitch&password=freeswitch");
 		}else
 			con = DriverManager.getConnection(

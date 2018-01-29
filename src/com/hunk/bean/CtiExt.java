@@ -6,6 +6,7 @@ public class CtiExt {
 	private int ifreg;
 	private String agentname;
 	private String status;
+	private String laststatuschange;
 	public int getExist() {
 		return exist;
 	}
@@ -36,13 +37,20 @@ public class CtiExt {
 	public void setStatus(String status) {
 		this.status = status;
 	}
-	public CtiExt(int exist, String name, int ifreg, String agentname, String status) {
+	public String getLaststatuschange() {
+		return laststatuschange;
+	}
+	public void setLaststatuschange(String laststatuschange) {
+		this.laststatuschange = laststatuschange;
+	}
+	public CtiExt(int exist, String name, int ifreg, String agentname, String status, String laststatuschange) {
 		super();
 		this.exist = exist;
 		this.name = name;
 		this.ifreg = ifreg;
 		this.agentname = agentname;
 		this.status = status;
+		this.laststatuschange = laststatuschange;
 	}
 	public CtiExt(){}
 }

@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Date;
 
 import com.hunk.DAO.JDBCMysql;
 import com.hunk.bean.CtiClient;
@@ -18,7 +19,7 @@ public class Agentsdo extends Dobase<CtiClient> {
 	}
 	
 	public String statusselsql(String name){
-		String sqlcmd = "select count(`name`) as `exist`, `name` as `agentid`, `status` as `agentstate` from `agents` where `name`='"+name+"'";
+		String sqlcmd = "select count(`name`) as `exist`, `name` as `agentid`, `status` as `agentstate`, `last_status_change` as `laststatuschange` from `agents` where `name`='"+name+"'";
 		return sqlcmd;
 	}
 		
@@ -46,7 +47,8 @@ public class Agentsdo extends Dobase<CtiClient> {
 				CtiClient content = new CtiClient(
 						res.getInt("exist"),
 						res.getString("agentid"),
-						res.getString("agentstate"));
+						res.getString("agentstate"),
+						res.getString("laststatuschange"));
 				contents.add(content);
 			}
 		}
@@ -60,14 +62,35 @@ public class Agentsdo extends Dobase<CtiClient> {
 		return sqlcmd;
 	}
 	
-	public ArrayList<String> getupdatesql(String ext, String status, String state, String agentname) {
+	public ArrayList<String> getupdatesql(String agentid, String status, String state, String agentname, int laststatus, String laststatuschange, int agentstatus, int cdrtype) {
 		ArrayList<String> sqls = new ArrayList<String>();
-		String sqlcmd = "update `fs_pbxnode_ctiagent` set `loginext` = '"+ext+"' where `agentid` = '"+agentname+"'";
+		String sqlcmd = "update `fs_pbxnode_ctiagent` set `loginext` = '"+agentname+"', `agentstate` = '"+agentstatus+"' where `agentid` = '"+agentid+"'";
 		sqls.add(sqlcmd);
 		sqlcmd = "update `agents` set "
 				+"`status` =  '"+status+"',"
-				+"`state` =  '"+state+"' "
+				+"`state` =  '"+state+"',"
+				+"`last_status_change` =  '"+(new Date()).getTime()/1000+"'"
 				+" where `name` = '"+agentname+"'";
+		sqls.add(sqlcmd);
+		//将坐席状态记录到cdr中
+		sqlcmd = "insert into fswcdr.fs_agents_cdr ("
+				+"`agentid`,"
+				+"`loginext`,"
+				+"`cdr_type`,"
+				+"`last_status`,"
+				+"`status`,"
+				+"`status_change`,"
+				+"`last_state_change`"
+				+") values("
+				//+content.getAutoid()+","
+				+"'"+agentid+"',"
+				+"'"+agentname+"',"
+				+"'"+cdrtype+"',"
+				+"'"+laststatus+"',"
+				+"'"+agentstatus+"',"
+				+"'"+(new Date()).getTime()/1000+"',"
+				+"'"+laststatuschange+"'"
+				+")";
 		sqls.add(sqlcmd);
 		return sqls;
 	}

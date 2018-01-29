@@ -33,6 +33,7 @@ public class Projectmngdo extends DoObbase<Projectbase>{
 					res.getString("concurrencyrate"),
 					res.getString("callinterval"),
 					res.getString("obtype"),
+					res.getString("dfcallrate"),
 					res.getString("queueno"),
 					res.getString("ivrid"),
 					res.getString("extid"),

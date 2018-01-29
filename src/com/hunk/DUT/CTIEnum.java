@@ -88,19 +88,21 @@ public class CTIEnum {
 	public static final int EVENT_WXChatIn = 201;
 	public static final int EVENT_WXChatTransfer = 202;
 	
-	public static final int AGENT_NOLOGIN = 0;
-	public static final int AGENT_IDLE = 1;
-	public static final int AGENT_NOREADY = 2;
-	public static final int AGENT_CALL_INITIALIZE = 3;
-	public static final int AGENT_CALL_RINGBACK = 4;
-	public static final int AGENT_CALL_RINGING = 5;
-	public static final int AGENT_CALL_UP = 6;
-	public static final int AGENT_CALL_DISCONNECT = 7;
-	public static final int AGENT_CALL_LINK = 8;
-	public static final int AGENT_CALL_MEETING = 9;
-	public static final int AGENT_CALL_INSERT = 10;
-	public static final int AGENT_CALL_HOLD = 11;
-	public static final int AGENT_CALL_MONITOR = 12;
+	public static final int AGENT_UNKNOWN = 0;
+	public static final int AGENT_NOLOGIN = 1;
+	public static final int AGENT_IDLE = 2;
+	public static final int AGENT_IDLE_ONDEMAND = 3;
+	public static final int AGENT_NOREADY = 4;
+	public static final int AGENT_CALL_INITIALIZE = 5;
+	public static final int AGENT_CALL_RINGBACK = 6;
+	public static final int AGENT_CALL_RINGING = 7;
+	public static final int AGENT_CALL_UP = 8;
+	public static final int AGENT_CALL_DISCONNECT = 9;
+	public static final int AGENT_CALL_LINK = 10;
+	public static final int AGENT_CALL_MEETING = 11;
+	public static final int AGENT_CALL_INSERT = 12;
+	public static final int AGENT_CALL_HOLD = 13;
+	public static final int AGENT_CALL_MONITOR = 14;
 	
 	public static final int OBCMDTYPE_START = 1;
 	public static final int OBCMDTYPE_PAUSE = 2;
@@ -109,4 +111,25 @@ public class CTIEnum {
 	public static final int OBCMDTYPE_RE_CUS_FAILED = 5;
 	public static final int OBCMDTYPE_RE_AGT_FAILED = 6;
 	public static final int OBCMDTYPE_RE_CUS_SUCCESS = 7;
+	
+	public static final int AGENT_CDRTYPE_AVAILABLE = 100;
+	public static final int AGENT_CDRTYPE_LOGOUT = 101;
+	public static final int AGENT_CDRTYPE_ONBREAK = 102;
+	
+	public static int GetAgentstatus(final String str_status){
+		switch (str_status) {
+		case unknown:
+			return AGENT_UNKNOWN;
+		case logout:
+			return AGENT_NOLOGIN;
+		case available:
+			return AGENT_IDLE;
+		case available_on_demand:
+			return AGENT_IDLE_ONDEMAND;
+		case onbreak:
+			return AGENT_NOREADY;
+		default:
+			return AGENT_NOLOGIN;
+		}
+	}
 }

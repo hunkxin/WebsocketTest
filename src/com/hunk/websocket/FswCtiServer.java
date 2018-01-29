@@ -82,6 +82,7 @@ public class FswCtiServer {
 		private String pjjobid;
 		private int cmdtype;
 		private Projectbase pjbase;
+		private int dfcallrate;
 		private int interal;
 		private int interal_temp;
 		private CallList lastnum;
@@ -117,6 +118,7 @@ public class FswCtiServer {
 				if(isEnd){
 					cmdExeThreads.remove(this);
 					subCmdExeThreadsCount();
+					System.out.println("executed:"+this.executed);
 					//将结束的信息记录到数据库中（保存在最后一条pjid的任务记录中），只记录暂停时间
 					if(this.pjbase!=null&&this.pjjobid!=null)//如果pjid或者pjjobid不存在，则不更新数据库
 						op.UpdatePauseinfo(this.pjjobid, this.lastnum);
@@ -213,18 +215,32 @@ public class FswCtiServer {
 //						}else//
 //							break;
 					}
-					rescode = op.GetAgentCount(this.pjbase.getQueueno(), ALagentcount);
-					if(rescode==0){//根据空闲坐席数和呼叫系数得到这次要发送的号码清单
-						try {
-							listnum = (Integer.parseInt(ALagentcount.get(0)))*(Integer.parseInt(this.pjbase.getConcurrencyrate()))/100;
-							System.out.println("listnum:"+listnum);
-						} catch (NumberFormatException e) {
-							// TODO: handle exception
-							listnum = 1;
+					//如果呼叫模式是ivr式外呼和直接转坐席，由于this.pjbase.getQueueno()为空，GetAgentCount将会报48错误，每次只会送一次号
+					try {
+						this.dfcallrate = Integer.parseInt(this.pjbase.getDfcallrate());
+					} catch (NumberFormatException e) {
+						// TODO: handle exception
+						dfcallrate = 0;
+					}
+					System.out.println("dfcallrate:"+dfcallrate);
+					if(dfcallrate>0){
+						listnum = dfcallrate;
+					}else{
+						rescode = op.GetAgentCount(this.pjbase.getQueueno(), ALagentcount);
+						//System.out.println("GetAgentCount"+":"+rescode);
+						if(rescode==0){//根据空闲坐席数和呼叫系数得到这次要发送的号码清单
+							try {
+								listnum = (Integer.parseInt(ALagentcount.get(0)))*(Integer.parseInt(this.pjbase.getConcurrencyrate()))/100;
+							} catch (NumberFormatException e) {
+								// TODO: handle exception
+								listnum = 1;
+							}
 						}
 					}
 					if(listnum<1) listnum = 1;//这里必须要至少选择一个，即便空闲坐席为0也宁可浪费，否则会出现线程不会停止的状况
+					System.out.println("listnum:"+listnum);
 					rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, this.lastnum==null?"0":this.lastnum.getAutoid(), calllist);//这里要保证接着上一次的记录继续查找
+					System.out.println("GetCallList"+":"+rescode);
 					if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END&&"0".equals(this.lastnum==null?"0":this.lastnum.getRetry())){//这里需要判断号码是否已经全部执行完，若只是执行完一轮，retry不为0，则从头开始继续执行，否则结束该线程
 						//号码全部执行完，结束该线程，发送消息给前端
 						String message = getresmsg(CTIEnum.CMD_ObCall, rescode);
@@ -272,15 +288,16 @@ public class FswCtiServer {
 							int t = 0;
 							if(svr_count>0){
 								int dispc_count = list_num/svr_count;
-								
+								System.out.println("dispc_count"+":"+dispc_count);
 								for(FswCtiServer item: webSocketSet_s){//平均分发
 	            	                try {
 	        	                		if(!UT.zstr(item.getServer().getPbxid())){
 	        	                			for(int i=0;i<dispc_count;i++){
-	        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*dispc_count+i).getTelnum());
-	        	                				message+=FswCtiServer.msgend;
-	        	                				message+="\"";
-	        	                				item.sendMessage(message);
+	        	                				String sendmsg = message;
+	        	                				sendmsg+=FswCtiServer.SetBody("destnum",calllist.get(t*dispc_count+i).getTelnum());
+	        	                				sendmsg+=FswCtiServer.msgend;
+	        	                				sendmsg+="\"";
+	        	                				item.sendMessage(sendmsg);
 	        	                			}
 	        	                		}
 	            	                } catch (IOException e) {
@@ -298,10 +315,11 @@ public class FswCtiServer {
 		            	                try {
 		        	                		if(!UT.zstr(item.getServer().getPbxid())){
 		        	                			for(int i=0;i<list_num%svr_count;i++){
-		        	                				message+=FswCtiServer.SetBody("destnum",calllist.get(t*svr_count+i).getTelnum());
-		        	                				message+=FswCtiServer.msgend;
-		        	                				message+="\"";
-		        	                				item.sendMessage(message);
+		        	                				String sendmsg = message;
+		        	                				sendmsg+=FswCtiServer.SetBody("destnum",calllist.get(t*svr_count+i).getTelnum());
+		        	                				sendmsg+=FswCtiServer.msgend;
+		        	                				sendmsg+="\"";
+		        	                				item.sendMessage(sendmsg);
 		        	                			}
 		        	                			break;
 		        	                		}
@@ -428,8 +446,10 @@ public class FswCtiServer {
               //还需要将已经登录的坐席分机登出
         		String agentid = this.client.getAgentid();
         		if(!UT.zstr(agentid)){
-        			Agentsdo op = new Agentsdo();
-        			op.updatedb(op.getupdatesql(this.client.getLoginext(), CTIEnum.logout, CTIEnum.Waiting));
+        			//Agentsdo op = new Agentsdo();
+        			//op.updatedb(op.getupdatesql(this.client.getLoginext(), CTIEnum.logout, CTIEnum.Waiting));
+        			ArrayList<CtiClient> contents = new ArrayList<CtiClient>();
+        			(new Agentsop()).agentaction(this.client.getAgentid(), this.client.getLoginext(), CTIEnum.logout, contents);
         		}
         		//System.out.println("还未销毁前，client对象总数："+getTestCount());
 //        		if(getTestCount()>1){
@@ -526,8 +546,8 @@ public class FswCtiServer {
 							// TODO: handle exception
 							cmdtype = 0;
 						}
-    					System.out.println(pjid);
-    					System.out.println(cmdtype);
+    					//System.out.println(pjid);
+    					//System.out.println(cmdtype);
     					if(cmdtype<1||cmdtype>7){//发送参数错误消息
     						String resmsg = getresmsg(msgclass, CTIEnum.PBX_ISNOT_HAVE_THISFUN);
     						for(FswCtiServer item: webSocketSet_a){//向前端admin发送命令执行回馈消息
@@ -701,7 +721,7 @@ public class FswCtiServer {
                 				}
             					name = "".equals(name)?this.client.getLoginext():name;//注意，是将坐席登录的分机登出
             					name = "".equals(name)?this.client.getAgentid():name;//如果登录分机为空，则认为登录分机和坐席id同名
-            					rescode = op.agentaction(name, action, contents);
+            					rescode = op.agentaction(this.client.getAgentid(), name, action, contents);
             				}
             				if(rescode == CTIEnum.AGENTLOGINOK){
             					this.client.setAgentid(name);

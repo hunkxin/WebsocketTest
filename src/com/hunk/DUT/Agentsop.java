@@ -48,8 +48,9 @@ public class Agentsop {
 								rescode = CTIEnum.AGENT_NOEXIST;
 							}else{
 								String status = extcontents.get(0).getStatus();
-								if(!CTIEnum.available.equals(status)){
-									resmsg += op.updatedb(op.getupdatesql(ext, CTIEnum.available, CTIEnum.Waiting, agentname));
+								String laststatuschange = extcontents.get(0).getLaststatuschange();
+								if(!CTIEnum.available.equals(status)){//还需加上cdr记录
+									resmsg += op.updatedb(op.getupdatesql(id, CTIEnum.available, CTIEnum.Waiting, agentname, CTIEnum.GetAgentstatus(status), laststatuschange, CTIEnum.AGENT_IDLE, CTIEnum.AGENT_CDRTYPE_AVAILABLE));
 									//System.out.println("3:"+resmsg);
 									if(resmsg.equals("")){
 										contents.get(0).setLoginext(agentname);//将登录分机信息和状态信息保存到坐席对象中
@@ -73,10 +74,10 @@ public class Agentsop {
 		return rescode;
 	}
 	
-	public int agentaction(String name, String action, ArrayList<CtiClient> contents){
+	public int agentaction(String agentid, String name, String action, ArrayList<CtiClient> contents){
 		String resmsg = "";
 		int rescode;
-		if(name==null||"".equals(name)){
+		if(agentid==null||"".equals(agentid)||name==null||"".equals(name)){
 			return CTIEnum.AGENTLOGINFAIL_ERR_AGENTID;
 		}
 		if(action==null||(!CTIEnum.logout.equals(action)&&!CTIEnum.onbreak.equals(action)&&!CTIEnum.available.equals(action))){
@@ -86,23 +87,30 @@ public class Agentsop {
 		//System.out.println("21:"+resmsg);
 		if(resmsg.equals("")&&contents.size()>0){
 			String status = contents.get(0).getAgentstate();
+			String laststatuschange = contents.get(0).getLaststatuschange();
 			if(CTIEnum.unknown.equals(status)||CTIEnum.logout.equals(status)){
 				rescode = CTIEnum.AGENT_CANNOT_BE_ACTIONED_NOLOGIN;
 			}else{
 				if(CTIEnum.logout.equals(action)){
-					resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.logout, CTIEnum.Waiting));
-					//System.out.println("22:"+resmsg);
-					if(resmsg.equals("")){
-						contents.get(0).setAgentlaststate(status);
-						rescode = CTIEnum.AGENTLOGOFF_OK;
+					if(action.equals(status)){
+						rescode = CTIEnum.AGENT_CANNOT_BE_ACTIONED_NOLOGIN;
 					}else{
-						rescode = CTIEnum.PBXINNERERR;
+						resmsg += op.updatedb(op.getupdatesql(agentid, CTIEnum.logout, CTIEnum.Waiting, name, CTIEnum.GetAgentstatus(status), laststatuschange, CTIEnum.AGENT_NOLOGIN, CTIEnum.AGENT_CDRTYPE_LOGOUT));
+						//resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.logout, CTIEnum.Waiting));
+						//System.out.println("22:"+resmsg);
+						if(resmsg.equals("")){
+							contents.get(0).setAgentlaststate(status);
+							rescode = CTIEnum.AGENTLOGOFF_OK;
+						}else{
+							rescode = CTIEnum.PBXINNERERR;
+						}
 					}
 				}else if(CTIEnum.onbreak.equals(action)){
 					if(action.equals(status)){
 						rescode = CTIEnum.AGENT_CANNOT_BE_MAKEBUSY_ISBUSY;
 					}else{
-						resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.onbreak, CTIEnum.Waiting));
+						resmsg += op.updatedb(op.getupdatesql(agentid, CTIEnum.onbreak, CTIEnum.Waiting, name, CTIEnum.GetAgentstatus(status), laststatuschange, CTIEnum.AGENT_NOREADY, CTIEnum.AGENT_CDRTYPE_ONBREAK));
+						//resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.onbreak, CTIEnum.Waiting));
 						//System.out.println("23:"+resmsg);
 						if(resmsg.equals("")){
 							contents.get(0).setAgentlaststate(status);
@@ -115,7 +123,8 @@ public class Agentsop {
 					if(action.equals(status)){
 						rescode = CTIEnum.AGENT_CANNOT_BE_MAKEIDLE_ISIDLE;
 					}else{
-						resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.available, CTIEnum.Waiting));
+						resmsg += op.updatedb(op.getupdatesql(agentid, CTIEnum.available, CTIEnum.Waiting, name, CTIEnum.GetAgentstatus(status), laststatuschange, CTIEnum.AGENT_IDLE, CTIEnum.AGENT_CDRTYPE_AVAILABLE));
+						//resmsg += op.updatedb(op.getupdatesql(name, CTIEnum.available, CTIEnum.Waiting));
 						//System.out.println("24:"+resmsg);
 						if(resmsg.equals("")){
 							contents.get(0).setAgentlaststate(status);

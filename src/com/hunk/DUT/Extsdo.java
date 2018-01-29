@@ -8,7 +8,7 @@ import com.hunk.bean.CtiExt;
 public class Extsdo extends Dobase<CtiExt> {
 	
 	public String rowselsql(String name) {
-		String sqlcmd = "select count(sc.name) as `exist`,sc.name,s.contact,c.name as `agentname`,c.status "
+		String sqlcmd = "select count(sc.name) as `exist`,sc.name,s.contact,c.name as `agentname`,c.status,c.last_status_change as `laststatuschange` "
 				+ "from `fs_pbxext` as sc left join `sip_registrations` as s on s.sip_username = sc.name "
 				+ "left join `agents` as c on c.name = sc.name where sc.name = '"+ name +"'";
 		return sqlcmd;
@@ -27,7 +27,8 @@ public class Extsdo extends Dobase<CtiExt> {
 								res.getString("name"),
 								isreg,
 								res.getString("agentname"),
-								res.getString("status"));
+								res.getString("status"),
+								res.getString("laststatuschange"));
 			contents.add(content);
 		}
 	}
