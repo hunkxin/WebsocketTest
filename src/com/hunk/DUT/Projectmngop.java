@@ -29,13 +29,13 @@ public class Projectmngop extends DoObbase<Projectbase>{
 				resmsg += clop.updatedb(clop.getupdatesql(cmdtype, contents.get(0)));
 			}
 			if(!resmsg.equals("")){
-				System.out.println("GetProfile"+":"+resmsg);
+				//System.out.println("GetProfile"+":"+resmsg);
 				rescode = CTIEnum.PBXINNERERR;
 			}
 		}else{
 			rescode = CTIEnum.OBCALLPJ_ISNOT_EXIST;
 			if(!resmsg.equals("")){
-				System.out.println("GetProfile"+":"+resmsg);
+				//System.out.println("GetProfile"+":"+resmsg);
 				rescode = CTIEnum.PBXINNERERR;
 			}
 		}
@@ -58,7 +58,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 				rescode = CTIEnum.OBCALLPJ_ISALREADY_END;
 			}
 		}else{
-			System.out.println("GetLastpjjob"+":"+resmsg);
+			//System.out.println("GetLastpjjob"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
@@ -80,7 +80,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 				rescode = CTIEnum.OBCALLPJ_ISALREADY_END;
 			}
 		}else{
-			System.out.println("GetCallList"+":"+resmsg);
+			//System.out.println("GetCallList"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
@@ -100,7 +100,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		}else{
 			rescode = CTIEnum.OBCALLPJ_NOIDLE_AGENT;
 			if(!resmsg.equals("")){
-				System.out.println("GetAgentCount"+":"+resmsg);
+				//System.out.println("GetAgentCount"+":"+resmsg);
 				rescode = CTIEnum.PBXINNERERR;
 			}
 		}
@@ -116,7 +116,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		if(resmsg.equals("")){
 			
 		}else{
-			System.out.println("UpdateCallList"+":"+resmsg);
+			//System.out.println("UpdateCallList"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
@@ -134,7 +134,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		if(resmsg.equals("")){
 			
 		}else{
-			System.out.println("Updatepauseinfo"+":"+resmsg);
+			//System.out.println("Updatepauseinfo"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
@@ -152,7 +152,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		if(resmsg.equals("")){
 			
 		}else{
-			System.out.println("Updatepauseinfo"+":"+resmsg);
+			//System.out.println("Updatepauseinfo"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;
@@ -170,7 +170,7 @@ public class Projectmngop extends DoObbase<Projectbase>{
 		if(resmsg.equals("")){
 			
 		}else{
-			System.out.println("Updatepauseinfo"+":"+resmsg);
+			//System.out.println("Updatepauseinfo"+":"+resmsg);
 			rescode = CTIEnum.PBXINNERERR;
 		}
 		return rescode;

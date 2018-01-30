@@ -20,7 +20,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 		+" order by `autoid`";
 		sqlcmd += sqlcdt;
 		sqlcmd += " limit "+listnum;
-		System.out.println(sqlcmd);
+		//System.out.println(sqlcmd);
 		return sqlcmd;
 	}
 		
@@ -48,7 +48,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			sqlcmd += sqlcdt;
 		}
 		sqls.add(sqlcmd);
-		System.out.println(sqlcmd);
+		//System.out.println(sqlcmd);
 		return sqls;
 	}
 	

@@ -49,7 +49,7 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
-		System.out.println(sqlcmd);
+		//System.out.println(sqlcmd);
 		return sqls;
 	}
 	
@@ -62,7 +62,7 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
-		System.out.println(sqlcmd);
+		//System.out.println(sqlcmd);
 		return sqls;
 	}
 	
@@ -74,7 +74,7 @@ public class Pjjobmngdo extends DoObbase<Pjjobbase>{
 		String sqlcdt = " where `autoid`= "+cdt;
 		sqlcmd += sqlcdt;
 		sqls.add(sqlcmd);
-		System.out.println(sqlcmd);
+		//System.out.println(sqlcmd);
 		return sqls;
 	}
 }
