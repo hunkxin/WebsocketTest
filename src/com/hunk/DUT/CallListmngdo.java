@@ -110,7 +110,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+"'"+content.getAutoid()+"',"
 			+"'"+cmdtype+"',"
 			//+"'"+content.getCallpool()+"',"
-			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist` where `pjid` = "+content.getAutoid()+" and `retry` = "+content.getCall_retry()+"),"
+			+"(select COUNT(*) from `fs_ob_pjnumlist` where `pjid` = "+content.getAutoid()+" and `retry` = "+content.getCall_retry()+"),"
 			//+"'"+content.getExecuted()+"',"
 			//+"'"+content.getLastnumid()+"',"
 			+"'"+(new Date()).getTime()/1000+"'"
@@ -119,7 +119,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+")";
 			sqls.add(sqlcmd);
 			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getAutoid()+" and not `retry` = "+content.getCall_retry();
+					+" where `pjid` = "+content.getAutoid()+" and `autoid` not in (select * from (select `autoid` from `fs_ob_pjnumlist` where `retry` = "+content.getCall_retry()+") temp)";
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_CUS_FAILED:
@@ -141,7 +141,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+"'"+content.getAutoid()+"',"
 			+"'"+cmdtype+"',"
 			//+"'"+content.getCallpool()+"',"
-			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist`"+sqlcdt+"),"
+			+"(select COUNT(*) from `fs_ob_pjnumlist`"+sqlcdt+"),"
 			//+"'"+content.getExecuted()+"',"
 			//+"'"+content.getLastnumid()+"',"
 			+"'"+(new Date()).getTime()/1000+"'"
@@ -149,12 +149,12 @@ public class CallListmngdo extends DoObbase<CallList>{
 			//+"'"+content.getEndtime()+"'"
 			+")";
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set "
-					+"`retry` = "+content.getCall_retry();
-			sqlcmd += sqlcdt;
+			//先将所有号码`isinjob`置0
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0 where `pjid` = "+content.getAutoid();
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 0 and `isbridge` = 0)";
+			//再将满足条件的号码置1
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 1, `retry` = "+content.getCall_retry()+", `isanswer` = 0, `isbridge` = 0";
+			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_AGT_FAILED:
@@ -176,7 +176,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+"'"+content.getAutoid()+"',"
 			+"'"+cmdtype+"',"
 			//+"'"+content.getCallpool()+"',"
-			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist`"+sqlcdt+"),"
+			+"(select COUNT(*) from `fs_ob_pjnumlist`"+sqlcdt+"),"
 			//+"'"+content.getExecuted()+"',"
 			//+"'"+content.getLastnumid()+"',"
 			+"'"+(new Date()).getTime()/1000+"'"
@@ -184,12 +184,10 @@ public class CallListmngdo extends DoObbase<CallList>{
 			//+"'"+content.getEndtime()+"'"
 			+")";
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set "
-					+"`retry` = "+content.getCall_retry();
-			sqlcmd += sqlcdt;
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0 where `pjid` = "+content.getAutoid();
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 0)";
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 1, `retry` = "+content.getCall_retry()+", `isanswer` = 0, `isbridge` = 0";
+			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			break;
 		case CTIEnum.OBCMDTYPE_RE_CUS_SUCCESS:
@@ -211,7 +209,7 @@ public class CallListmngdo extends DoObbase<CallList>{
 			+"'"+content.getAutoid()+"',"
 			+"'"+cmdtype+"',"
 			//+"'"+content.getCallpool()+"',"
-			+"(select COUNT(`autoid`) from `fs_ob_pjnumlist`"+sqlcdt+"),"
+			+"(select COUNT(*) from `fs_ob_pjnumlist`"+sqlcdt+"),"
 			//+"'"+content.getExecuted()+"',"
 			//+"'"+content.getLastnumid()+"',"
 			+"'"+(new Date()).getTime()/1000+"'"
@@ -219,12 +217,10 @@ public class CallListmngdo extends DoObbase<CallList>{
 			//+"'"+content.getEndtime()+"'"
 			+")";
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set "
-					+"`retry` = "+content.getCall_retry();
-			sqlcmd += sqlcdt;
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0 where `pjid` = "+content.getAutoid();
 			sqls.add(sqlcmd);
-			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 0"
-					+" where `pjid` = "+content.getAutoid()+" and not (`retry` < "+content.getCall_retry()+" and `isanswer` = 1 and `isbridge` = 1)";
+			sqlcmd = "update `fs_ob_pjnumlist` set `isinjob` = 1, `retry` = "+content.getCall_retry()+", `isanswer` = 0, `isbridge` = 0";
+			sqlcmd += sqlcdt;
 			sqls.add(sqlcmd);
 			break;
 		default:
