@@ -221,7 +221,7 @@ public class FswCtiServer {
 						// TODO: handle exception
 						dfcallrate = 0;
 					}
-					System.out.println("dfcallrate:"+dfcallrate);
+					//System.out.println("dfcallrate:"+dfcallrate);
 					if(dfcallrate>0){
 						listnum = dfcallrate;
 					}else{
@@ -237,7 +237,7 @@ public class FswCtiServer {
 						}
 					}
 					if(listnum<1) listnum = 1;//这里必须要至少选择一个，即便空闲坐席为0也宁可浪费，否则会出现线程不会停止的状况
-					System.out.println("listnum:"+listnum);
+					//System.out.println("listnum:"+listnum);
 					rescode = op.GetCallList(pjid, pjbase.getCall_retry(), this.cmdtype, listnum, this.lastnum==null?"0":this.lastnum.getAutoid(), calllist);//这里要保证接着上一次的记录继续查找
 					//System.out.println("GetCallList"+":"+rescode);
 					if(rescode==CTIEnum.OBCALLPJ_ISALREADY_END&&"0".equals(this.lastnum==null?"0":this.lastnum.getRetry())){//这里需要判断号码是否已经全部执行完，若只是执行完一轮，retry不为0，则从头开始继续执行，否则结束该线程
