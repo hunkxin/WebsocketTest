@@ -15,6 +15,7 @@ public class Agentsdo extends Dobase<CtiClient> {
 	public String rowselsql(String id) {
 		String sqlcmd = "select count(`agentid`) as `exist`, `guid`, `agentid`, `agentmd5pwd`, `loginext`, `agentrole`, `agentext`, `agentlevel`, "
 				+ "`agentstate`, `ifrevcallin` from `fs_pbxnode_ctiagent` where `agentid`='"+id+"'";
+		//System.out.println(sqlcmd);
 		return sqlcmd;
 	}
 	

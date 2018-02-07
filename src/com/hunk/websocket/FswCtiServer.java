@@ -397,6 +397,7 @@ public class FswCtiServer {
         	webSocketSet_s.add(this);
         	addOnlineSvrCount();
         	this.isServer = true;
+        	this.isAdmin = false;
         	this.server = new CtiServer();
         	//System.out.println("有新连接加入！当前在线节点数为" + getOnlineSvrCount());
         }else if("client".equals(usertype)){
@@ -656,7 +657,7 @@ public class FswCtiServer {
         	                	if (session.isOpen()){
         	                		if(item==this){
         	                			item.sendMessage(resmsg);
-        	                		}else if(this.client.getAgentid().equals(item.getClient().getAgentid())){
+        	                		}else if(rescode==CTIEnum.AGENTLOGINOK&&this.client.getAgentid().equals(item.getClient().getAgentid())){
         	                			item.sendMessage(getresmsg(msgclass, CTIEnum.AGENTLOGIN_FORCELOGOFF));
         	                			item.getClient().setAgentid("");//使前面重复账号自动登出
         	                			item.getClient().setLoginext("");
@@ -734,7 +735,7 @@ public class FswCtiServer {
                 	                	if (session.isOpen()){
                 	                		if(item==this){
                 	                			item.sendMessage(resmsg);
-                	                		}else if(this.client.getAgentid().equals(item.getClient().getAgentid())){
+                	                		}else if(rescode==CTIEnum.AGENTLOGINOK&&this.client.getAgentid().equals(item.getClient().getAgentid())){
                 	                			item.sendMessage(getresmsg(msgclass, CTIEnum.AGENTLOGIN_FORCELOGOFF));
                 	                			item.getClient().setAgentid("");
                 	                			item.getClient().setLoginext("");
