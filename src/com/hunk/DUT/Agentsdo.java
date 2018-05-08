@@ -81,7 +81,7 @@ public class Agentsdo extends Dobase<CtiClient> {
 				+"`last_status`,"
 				+"`status`,"
 				+"`status_change`,"
-				+"`last_state_change`"
+				+"`last_status_change`"
 				+") values("
 				//+content.getAutoid()+","
 				+"'"+agentid+"',"
